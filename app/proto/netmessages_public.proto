@@ -254,7 +254,7 @@ message CSVCMsg_SendTable
     optional float low_value = 7;     // else ...
     optional float high_value = 8;      //    ...
     optional int32 num_bits = 9;      //    ...
-  };
+  }
 
   optional bool is_end = 1;
   optional string net_table_name = 2;
@@ -380,14 +380,14 @@ message CSVCMsg_GameEventList
   {
     optional int32 type = 1;
     optional string name = 2;
-  };
+  }
 
   message descriptor_t
   {
     optional int32 eventid = 1;
     optional string name = 2;
     repeated key_t keys = 3;
-  };
+  }
 
   repeated descriptor_t descriptors = 1;
 }
@@ -431,7 +431,7 @@ message CSVCMsg_Sounds
     optional int32      sound_level = 15; // soundlevel_t
     optional bool     is_sentence = 16;
     optional bool     is_ambient = 17;
-  };
+  }
 
   optional bool reliable_sound = 1;
   repeated sounddata_t sounds = 2;
