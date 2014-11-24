@@ -10,6 +10,8 @@ var netMessages = fs.readFileSync( __dirname + '/../proto/netmessages_public.pro
 var messages = protobuf( netMessages );
 console.log(messages);
 
+const MAX_OSPATH = 260;
+
 document.addEventListener( 'drop', event => {
   event.stopPropagation();
   event.preventDefault();
@@ -28,8 +30,39 @@ document.addEventListener( 'drop', event => {
     return events.map( event => {
       var result = event.srcElement.result;
       var buffer = new Buffer( new Uint8Array( result ) );
+      var offset = 8;
       // Demo filestamp. Should be HL2DEMO.
-      console.log( buffer.toString( 'ascii', 0, 8 ) );
+      console.log( buffer.toString( 'ascii', 0, offset ) );
+      // Demo protocol. Should be 4.
+      console.log( buffer.readInt32LE( offset ) );
+      offset += 4;
+      // Network protocol. Protocol version.
+      console.log( buffer.readInt32LE( offset ) );
+      offset += 4;
+      // Server name.
+      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
+      offset += MAX_OSPATH;
+      // Client name.
+      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
+      offset += MAX_OSPATH;
+      // Map name.
+      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
+      offset += MAX_OSPATH;
+      // Game directory.
+      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
+      offset += MAX_OSPATH;
+      // Playback time.
+      console.log( buffer.readFloatLE( offset ) );
+      offset += 4;
+      // Playback ticks.
+      console.log( buffer.readInt32LE( offset ) );
+      offset += 4;
+      // Playback frames.
+      console.log( buffer.readInt32LE( offset ) );
+      offset += 4;
+      // Sign-on length.
+      console.log( buffer.readInt32LE( offset ) );
+      offset += 4;
     });
   });
 });
