@@ -1,4 +1,5 @@
 import protobuf from 'protocol-buffers';
+import BufferReader from './buffer-reader';
 
 // brfs packages.
 var fs = require( 'fs' );
@@ -52,65 +53,64 @@ document.addEventListener( 'drop', event => {
     return events.map( event => {
       var result = event.srcElement.result;
       var buffer = new Buffer( new Uint8Array( result ) );
+      var reader = new BufferReader( buffer );
       var length = buffer.length;
 
-      var offset = 8;
       // Demo filestamp. Should be HL2DEMO.
-      console.log( buffer.toString( 'ascii', 0, offset ) );
+      var demoFilestamp = reader.readString( 8 );
+      console.log( demoFilestamp );
       // Demo protocol. Should be 4.
-      console.log( buffer.readInt32LE( offset ) );
-      offset += 4;
+      var demoProtocol = reader.readInt32();
+      console.log( demoProtocol );
       // Network protocol. Protocol version.
-      console.log( buffer.readInt32LE( offset ) );
-      offset += 4;
+      var networkProtocol = reader.readInt32();
+      console.log( networkProtocol );
       // Server name.
-      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
-      offset += MAX_OSPATH;
+      var serverName = reader.readString( MAX_OSPATH );
+      console.log( serverName );
       // Client name.
-      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
-      offset += MAX_OSPATH;
+      var clientName = reader.readString( MAX_OSPATH );
+      console.log( clientName );
       // Map name.
-      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
-      offset += MAX_OSPATH;
+      var mapName = reader.readString( MAX_OSPATH );
+      console.log( mapName );
       // Game directory.
-      console.log( buffer.toString( 'ascii', offset, offset + MAX_OSPATH ) );
-      offset += MAX_OSPATH;
+      var gameDirectory = reader.readString( MAX_OSPATH );
+      console.log( gameDirectory );
       // Playback time.
-      console.log( buffer.readFloatLE( offset ) );
-      offset += 4;
+      var playbackTime = reader.readFloat();
+      console.log( playbackTime );
       // Playback ticks.
-      console.log( buffer.readInt32LE( offset ) );
-      offset += 4;
+      var playbackTicks = reader.readInt32();
+      console.log( playbackTicks );
       // Playback frames.
-      console.log( buffer.readInt32LE( offset ) );
-      offset += 4;
+      var playbackFrames = reader.readInt32();
+      console.log( playbackFrames );
       // Sign-on length.
-      console.log( buffer.readInt32LE( offset ) );
-      offset += 4;
+      var signonLength = reader.readInt32();
+      console.log( signonLength );
 
       function readRawData() {
         // Size.
-        var size = buffer.readInt32LE( offset );
-        offset += 4;
+        var size = reader.readInt32();
         console.log( 'size', size );
-        offset += size;
+        buffer.offset += size;
       }
 
       console.log( 'commands' );
-      while ( offset < length ) {
+      while ( reader.offset < length ) {
         // Read command header.
         // Command.
-        var command = buffer.readUInt8( offset );
+        var command = reader.readUInt8();
         console.log( command );
-        offset++;
 
         // Time stamp.
-        console.log( buffer.readInt32LE( offset ) );
-        offset += 4;
+        var timestamp = reader.readInt32();
+        console.log( timestamp );
 
         // Player slot.
-        console.log( buffer.readUInt8( offset ) );
-        offset++;
+        var playerSlot = reader.readUInt8();
+        console.log( playerSlot );
 
         switch ( command ) {
           case DemoMessage.DEM_SYNCTICK:
