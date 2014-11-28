@@ -1,5 +1,6 @@
 import protobuf from 'protocol-buffers';
 import BufferReader from './buffer-reader';
+import { DemoCommandInfo } from './defs';
 
 // brfs packages.
 var fs = require( 'fs' );
@@ -97,6 +98,18 @@ document.addEventListener( 'drop', event => {
         buffer.offset += size;
       }
 
+      function handleDemoPacket() {
+        var democmdinfo = DemoCommandInfo.read( reader );
+        console.log( democmdinfo );
+
+        // Read sequence info.
+        var seqNrIn = reader.readInt32();
+        var seqNrOut = reader.readInt32();
+        console.log( seqNrIn, seqNrOut );
+
+        readRawData();
+      }
+
       console.log( 'commands' );
       while ( reader.offset < length ) {
         // Read command header.
@@ -144,7 +157,7 @@ document.addEventListener( 'drop', event => {
           case DemoMessage.DEM_SIGNON:
           case DemoMessage.DEM_PACKET:
             console.log( 'dem_signon|dem_packet' );
-            readRawData();
+            handleDemoPacket();
             break;
 
           default:
