@@ -10,9 +10,11 @@ var netMessages = fs.readFileSync( __dirname + '/../proto/netmessages_public.pro
 // console.log( netMessages );
 
 var messages = protobuf( netMessages );
-console.log(messages);
+console.log( messages );
 
 const MAX_OSPATH = 260;
+// Largest message that can be sent in bytes.
+const NET_MAX_PAYLOAD = 262144 - 4;
 
 const DemoMessage = {
   // Startup message. Process as fast as possible.
@@ -36,6 +38,48 @@ const DemoMessage = {
   DEM_LASTCMD: 9
 };
 
+/*jshint camelcase:false*/
+const NET_Messages = {
+  net_NOP: 0,
+  net_Disconnect: 1,
+  net_File: 2,
+  net_Tick: 4,
+  net_StringCmd: 5,
+  net_SetConVar: 6,
+  net_SignonState: 7
+};
+
+const SVC_Messages = {
+  svc_ServerInfo: 8,
+  svc_SendTable: 9,
+  svc_ClassInfo: 10,
+  svc_SetPause: 11,
+  svc_CreateStringTable: 12,
+  svc_UpdateStringTable: 13,
+  svc_VoiceInit: 14,
+  svc_VoiceData: 15,
+  svc_Print: 16,
+  svc_Sounds: 17,
+  svc_SetView: 18,
+  svc_FixAngle: 19,
+  svc_CrosshairAngle: 20,
+  svc_BSPDecal: 21,
+  svc_UserMessage: 23,
+  svc_GameEvent: 25,
+  svc_PacketEntities: 26,
+  svc_TempEntities: 27,
+  svc_Prefetch: 28,
+  svc_Menu: 29,
+  svc_GameEventList: 30,
+  svc_GetCvarValue: 31
+};
+/*jshint camelcase:true*/
+
+const bitbuf = {
+  kMaxVarintBytes: 10,
+  kMaxVarint32Bytes: 5
+};
+
 document.addEventListener( 'drop', event => {
   event.stopPropagation();
   event.preventDefault();
@@ -47,7 +91,7 @@ document.addEventListener( 'drop', event => {
           var reader = new FileReader();
           reader.onload = resolve;
           reader.onerror = reject;
-          reader.readAsArrayBuffer( file.slice( 0, 2048 ) );
+          reader.readAsArrayBuffer( file.slice( 0, 262144 ) );
         });
       })
   ).then( events => {
@@ -94,8 +138,105 @@ document.addEventListener( 'drop', event => {
       function readRawData() {
         // Size.
         var size = reader.readInt32();
-        console.log( 'size', size );
-        buffer.offset += size;
+        console.log( 'size:', size );
+        reader.offset += size;
+      }
+
+      // Read 1-5 bytes in order to extract a 32-bit unsigned value from the
+      // stream. 7 data bits are extracted from each byte with the 8th bit used
+      // to indicate whether the loop should continue.
+      // This allows variable size numbers to be stored with tolerable
+      // efficiency. Numbers sizes that can be stored for various numbers of
+      // encoded bits are:
+      //  8-bits: 0-127
+      // 16-bits: 128-16383
+      // 24-bits: 16384-2097151
+      // 32-bits: 2097152-268435455
+      // 40-bits: 268435456-0xFFFFFFFF
+      function readVarInt32() {
+        var result = 0;
+        var count = 0;
+        var b;
+
+        do {
+          if ( count === bitbuf.kMaxVarint32Bytes ) {
+            return result;
+          }
+
+          b = reader.readUInt8();
+          result = result | ( b & 0x7F ) << ( 7 * count );
+          count++;
+        } while ( b & 0x80 );
+
+        return result;
+      }
+
+      function dumpDemoPacket( start, length ) {
+        while ( reader.offset - start < length ) {
+          var command = readVarInt32();
+          var size = readVarInt32();
+          if ( reader.offset - start + size > length ) {
+            throw new Error();
+          }
+
+          if ( !size ) {
+            return;
+          }
+
+          console.log( 'command:', command, 'size:', size );
+
+          /*jshint camelcase:false*/
+          // NET_Messages.
+          var commandType = [
+            'NOP',
+            'Disconnect',
+            'File',
+            'Tick',
+            'StringCmd',
+            'SetConVar',
+            'SignonState'
+          ].find( type => command === NET_Messages[ 'net_' + type ] );
+
+          var commandHandler = null;
+          if ( commandType ) {
+            commandHandler = messages[ 'CNETMsg_' + commandType ];
+          }
+
+          // SVC_Messages.
+          commandType = commandType || [
+            'ServerInfo',
+            'SendTable',
+            'ClassInfo',
+            'SetPause',
+            'CreateStringTable',
+            'UpdateStringTable',
+            'VoiceInit',
+            'VoiceData',
+            'Print',
+            'Sounds',
+            'SetView',
+            'FixAngle',
+            'CrosshairAngle',
+            'BSPDecal',
+            'UserMessage',
+            'GameEvent',
+            'PacketEntities',
+            'TempEntities',
+            'Prefetch',
+            'Menu',
+            'GameEventList',
+            'GetCvarValue'
+          ].find( type => command === SVC_Messages[ 'svc_' + type ] );
+          /*jshint camelcase:true*/
+
+          if ( commandType && !commandHandler ) {
+            commandHandler = messages[ 'CSVCMsg_' + commandType ];
+          }
+
+          console.log( commandHandler );
+
+          reader.offset += size;
+        }
       }
 
       function handleDemoPacket() {
@@ -105,9 +246,12 @@ document.addEventListener( 'drop', event => {
         // Read sequence info.
         var seqNrIn = reader.readInt32();
         var seqNrOut = reader.readInt32();
-        console.log( seqNrIn, seqNrOut );
+        console.log( 'seqNrIn:', seqNrIn, 'seqNrOut:', seqNrOut );
 
-        readRawData();
+        var length = reader.readInt32();
+        console.log( 'length:', length );
+
+        dumpDemoPacket( reader.offset, length );
       }
 
       console.log( 'commands' );
@@ -115,15 +259,15 @@ document.addEventListener( 'drop', event => {
         // Read command header.
         // Command.
         var command = reader.readUInt8();
-        console.log( command );
+        console.log( 'command:', command );
 
         // Time stamp.
         var timestamp = reader.readInt32();
-        console.log( timestamp );
+        console.log( 'timestamp:', timestamp );
 
         // Player slot.
         var playerSlot = reader.readUInt8();
-        console.log( playerSlot );
+        console.log('playerSlot:', playerSlot );
 
         switch ( command ) {
           case DemoMessage.DEM_SYNCTICK:
