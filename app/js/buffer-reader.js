@@ -5,6 +5,12 @@ export default class BufferReader {
     this.length = buffer.length;
   }
 
+  read( length ) {
+    var buffer = this.buffer.slice( this.offset, this.offset + length );
+    this.offset += length;
+    return buffer;
+  }
+
   // Default to little-endian.
   readUInt8() {
     var value = this.buffer.readUInt8( this.offset );

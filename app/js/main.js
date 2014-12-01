@@ -91,7 +91,7 @@ document.addEventListener( 'drop', event => {
           var reader = new FileReader();
           reader.onload = resolve;
           reader.onerror = reject;
-          reader.readAsArrayBuffer( file.slice( 0, 262144 ) );
+          reader.readAsArrayBuffer( file.slice( 0, 1 << 19 ) );
         });
       })
   ).then( events => {
@@ -234,8 +234,7 @@ document.addEventListener( 'drop', event => {
           }
 
           console.log( commandHandler );
-
-          reader.offset += size;
+          console.log( commandHandler.decode( reader.read( size ) ) );
         }
       }
 
