@@ -38,7 +38,6 @@ const DemoMessage = {
   DEM_LASTCMD: 9
 };
 
-/*jshint camelcase:false*/
 const NET_Messages = {
   net_NOP: 0,
   net_Disconnect: 1,
@@ -72,12 +71,6 @@ const SVC_Messages = {
   svc_Menu: 29,
   svc_GameEventList: 30,
   svc_GetCvarValue: 31
-};
-/*jshint camelcase:true*/
-
-const bitbuf = {
-  kMaxVarintBytes: 10,
-  kMaxVarint32Bytes: 5
 };
 
 document.addEventListener( 'drop', event => {
@@ -135,6 +128,8 @@ document.addEventListener( 'drop', event => {
       var signonLength = reader.readInt32();
       console.log( signonLength );
 
+      var dataTables = [];
+
       function readRawData() {
         // Size.
         var size = reader.readInt32();
@@ -142,39 +137,42 @@ document.addEventListener( 'drop', event => {
         reader.offset += size;
       }
 
-      // Read 1-5 bytes in order to extract a 32-bit unsigned value from the
-      // stream. 7 data bits are extracted from each byte with the 8th bit used
-      // to indicate whether the loop should continue.
-      // This allows variable size numbers to be stored with tolerable
-      // efficiency. Numbers sizes that can be stored for various numbers of
-      // encoded bits are:
-      //  8-bits: 0-127
-      // 16-bits: 128-16383
-      // 24-bits: 16384-2097151
-      // 32-bits: 2097152-268435455
-      // 40-bits: 268435456-0xFFFFFFFF
-      function readVarInt32() {
-        var result = 0;
-        var count = 0;
-        var b;
+      function readFromBuffer( buffer ) {
+        var size = buffer.readVarInt32();
+        // Assume read buffer is byte-aligned.
+        return buffer.read( size );
+      }
 
-        do {
-          if ( count === bitbuf.kMaxVarint32Bytes ) {
-            return result;
+      function recvTable_ReadInfos( message ) {
+        console.log( message.net_table_name, message.props.length );
+      }
+
+      function parseDataTable() {
+        var size = reader.readInt32();
+        console.log( 'size:', size );
+        var slice = new BufferReader( reader.read( size ) );
+        while ( 1 ) {
+          var type = slice.readVarInt32();
+
+          var pBuffer = readFromBuffer( slice );
+          var message = messages.CSVCMsg_SendTable.decode( pBuffer );
+          if ( message.is_end ) {
+            break;
           }
 
-          b = reader.readUInt8();
-          result = result | ( b & 0x7F ) << ( 7 * count );
-          count++;
-        } while ( b & 0x80 );
+          recvTable_ReadInfos( message );
+          dataTables.push( message );
+        }
+      }
 
-        return result;
+      function dumpStringTables() {
+        readRawData();
       }
 
       function dumpDemoPacket( start, length ) {
         while ( reader.offset - start < length ) {
-          var command = readVarInt32();
-          var size = readVarInt32();
+          var command = reader.readVarInt32();
+          var size = reader.readVarInt32();
           if ( reader.offset - start + size > length ) {
             throw new Error();
           }
@@ -185,7 +183,6 @@ document.addEventListener( 'drop', event => {
 
           console.log( 'command:', command, 'size:', size );
 
-          /*jshint camelcase:false*/
           // NET_Messages.
           var commandType = [
             'NOP',
@@ -227,7 +224,6 @@ document.addEventListener( 'drop', event => {
             'GameEventList',
             'GetCvarValue'
           ].find( type => command === SVC_Messages[ 'svc_' + type ] );
-          /*jshint camelcase:true*/
 
           if ( commandType && !commandHandler ) {
             commandHandler = messages[ 'CSVCMsg_' + commandType ];
@@ -284,12 +280,12 @@ document.addEventListener( 'drop', event => {
 
           case DemoMessage.DEM_DATATABLES:
             console.log( 'dem_datatables' );
-            readRawData();
+            parseDataTable();
             break;
 
           case DemoMessage.DEM_STRINGTABLES:
             console.log( 'dem_stringtables' );
-            readRawData();
+            dumpStringTables();
             break;
 
           case DemoMessage.DEM_USERCMD:

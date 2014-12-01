@@ -1,3 +1,8 @@
+export const bitbuf = {
+  kMaxVarintBytes: 10,
+  kMaxVarint32Bytes: 5
+};
+
 export default class BufferReader {
   constructor( buffer ) {
     this.buffer = buffer;
@@ -40,5 +45,34 @@ export default class BufferReader {
     );
     this.offset += length;
     return value;
+  }
+
+  // Read 1-5 bytes in order to extract a 32-bit unsigned value from the
+  // stream. 7 data bits are extracted from each byte with the 8th bit used
+  // to indicate whether the loop should continue.
+  // This allows variable size numbers to be stored with tolerable
+  // efficiency. Numbers sizes that can be stored for various numbers of
+  // encoded bits are:
+  //  8-bits: 0-127
+  // 16-bits: 128-16383
+  // 24-bits: 16384-2097151
+  // 32-bits: 2097152-268435455
+  // 40-bits: 268435456-0xFFFFFFFF
+  readVarInt32() {
+    var result = 0;
+    var count = 0;
+    var b;
+
+    do {
+      if ( count === bitbuf.kMaxVarint32Bytes ) {
+        return result;
+      }
+
+      b = this.readUInt8();
+      result = result | ( b & 0x7F ) << ( 7 * count );
+      count++;
+    } while ( b & 0x80 );
+
+    return result;
   }
 }
