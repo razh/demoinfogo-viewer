@@ -23,7 +23,16 @@ export default class BufferReader {
     return value;
   }
 
+  readByte() { return this.readUInt8(); }
   readChar() { return this.readUInt8(); }
+
+  readInt16() {
+    var value = this.buffer.readInt16LE( this.offset );
+    this.offset += 2;
+    return value;
+  }
+
+  readShort() { return this.readInt16(); }
 
   readInt32() {
     var value = this.buffer.readInt32LE( this.offset );
@@ -45,6 +54,23 @@ export default class BufferReader {
     );
     this.offset += length;
     return value;
+  }
+
+  readCString( length ) {
+    var array = [];
+    var ch;
+    for ( var i = 0; i < length; i++ ) {
+      ch = this.buffer[ this.offset + i ];
+      if ( !ch ) {
+        break;
+      }
+
+      array.push( ch );
+    }
+
+    // Add string length and one NULL character.
+    this.offset += i + 1;
+    return String.fromCharCode( ...array );
   }
 
   // Read 1-5 bytes in order to extract a 32-bit unsigned value from the
