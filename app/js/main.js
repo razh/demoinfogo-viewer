@@ -195,8 +195,10 @@ document.addEventListener( 'drop', event => {
       var signonLength = reader.readInt32();
       console.log( signonLength );
 
+      var serverClassBits = 0;
       var serverClasses = [];
       var dataTables = [];
+      var currentExcludes = [];
 
       function readRawData() {
         // Size.
@@ -245,6 +247,97 @@ document.addEventListener( 'drop', event => {
         }
       }
 
+      function getTableByName( name ) {
+        for ( var i = 0, il = dataTables.length; i < il; i++ ) {
+          if ( dataTables[i].net_table_name === name ) {
+            return dataTables[i];
+          }
+        }
+      }
+
+      function gatherExcludes( table ) {
+        for ( var i = 0, il = table.props_size; i < il; i++ ) {
+          var sendProp = table.props[i];
+          if ( sendProp.flags & SPROP.EXCLUDE ) {
+            currentExcludes.push({
+              var_name: sendProp.var_name,
+              dt_name: sendProp.dt_name,
+              net_table_name: sendProp.net_table_name
+            });
+          }
+
+          if ( sendProp.type === SendPropType.DPT_DataTable ) {
+            var subTable = getTableByName( sendProp.dt_name );
+            if ( subTable ) {
+              gatherExcludes( subTable );
+            }
+          }
+        }
+      }
+
+      function isPropExcluded( table, checkSendProp ) {
+        for ( var i = 0, il = currentExcludes.length; i < il; i++ ) {
+          if ( table.net_table_name === currentExcludes[i].dt_name &&
+               checkSendProp.var_name === currentExcludes[i].var_name ) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      function gatherProps_IterateProps( table, serverClassIndex, flattenedProps ) {
+        for ( var i = 0, il = table.props_size; i < il; i++ ) {
+          var sendProp = table.props[i];
+          if ( sendProp.flags & SPROP.INSIDEARRAY ||
+               sendProp.flags & SPROP.EXCLUDE ||
+               isPropExcluded( table, sendProp ) ) {
+            continue;
+          }
+
+          if ( sendProp.type === SendPropType.DPT_DataTable ) {
+            var subTable = getTableByName( sendProp.dt_name );
+            if ( subTable ) {
+              if ( sendProp.flags & SPROP.COLLAPSIBLE ) {
+                gatherProps_IterateProps( subTable, serverClassIndex, flattenedProps );
+              } else {
+                gatherProps( subTable, serverClassIndex );
+              }
+            }
+          } else {
+            if ( sendProp.type === SendPropType.DPT_Array ) {
+              flattenedProps.push({
+                prop: sendProp,
+                arrayElementProp: table.props[ i - 1 ]
+              });
+            } else {
+              flattenedProps.push({
+                prop: sendProp
+              });
+            }
+          }
+        }
+      }
+
+      function gatherProps( table, serverClassIndex ) {
+        var tempFlattenedProps = [];
+        gatherProps_IterateProps( table, serverClassIndex, tempFlattenedProps );
+
+        var flattenedProps = serverClasses[ serverClassIndex ].flattenedProps;
+        for ( var i = 0, il = tempFlattenedProps.length; i < il; i++ ) {
+          flattenedProps.push( tempFlattenedProps[i] );
+        }
+      }
+
+      function flattenDataTable( serverClassIndex )  {
+        var table = dataTables[ serverClasses[ serverClassIndex ].nDataTable ];
+
+        currentExcludes = [];
+        gatherExcludes( table );
+
+        gatherProps( table, serverClassIndex );
+      }
+
       function parseDataTable() {
         var size = reader.readInt32();
         console.log( 'size:', size );
@@ -252,8 +345,8 @@ document.addEventListener( 'drop', event => {
         while ( 1 ) {
           var type = slice.readVarInt32();
 
-          var pBuffer = readFromBuffer( slice );
-          var message = messages.CSVCMsg_SendTable.decode( pBuffer );
+          var buffer = readFromBuffer( slice );
+          var message = messages.CSVCMsg_SendTable.decode( buffer );
           if ( message.is_end ) {
             break;
           }
@@ -288,6 +381,22 @@ document.addEventListener( 'drop', event => {
 
           serverClasses.push( entry );
         }
+
+        console.log( 'Flattening data tables...' );
+
+        for ( var i = 0; i < serverClassCount; i++ ) {
+          flattenDataTable( i );
+        }
+
+        console.log( 'Done.' );
+
+        // Perform integer log2() to set serverClassBits
+        var temp = serverClassCount;
+        serverClassBits = 0;
+        while ( temp >>= 1 ) {  ++serverClassBits; }
+        serverClassBits++;
+
+        return true;
       }
 
       function dumpStringTables() {
