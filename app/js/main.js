@@ -336,6 +336,63 @@ document.addEventListener( 'drop', event => {
         gatherExcludes( table );
 
         gatherProps( table, serverClassIndex );
+
+        var flattenedProps = serverClasses[ serverClassIndex ].flattenedProps;
+
+        // Get priorities.
+        var priorities = [ 64 ];
+        var priority;
+        for ( var i = 0, il = flattenedProps.length; i < il; i++ ) {
+          priority = flattenedProps[i].prop.priority;
+          var found = false;
+          for ( var j = 0, jl = priorities.length; j < jl; j++ ) {
+            if ( priorities[j] === priority ) {
+              found = true;
+              break;
+            }
+          }
+
+          if ( !found ) {
+            priorities.push( priority );
+          }
+        }
+
+        priorities.sort((a, b) => a - b);
+
+        // Sort flattenedProps by priority.
+        var start = 0;
+        for (
+          var priorityIndex = 0, prioritiesLength = priorities.length;
+          priorityIndex < prioritiesLength;
+          priorityIndex++
+        ) {
+          priority = priorities[ priorityIndex ];
+
+          while ( true ) {
+            var currentProp = start;
+            while ( currentProp < flattenedProps.length ) {
+              var prop = flattenedProps[ currentProp ].prop;
+
+              if ( prop.priority === priority ||
+                   priority === 64 && ( SPROP.CHANGES_OFTEN & prop.flags ) ) {
+                if ( start !== currentProp ) {
+                  var temp  = flattenedProps[ start ];
+                  flattenedProps[ start ] = flattenedProps[ currentProp ];
+                  flattenedProps[ currentProp ] = temp;
+                }
+
+                start++;
+                break;
+              }
+
+              currentProp++;
+            }
+
+            if ( currentProp === flattenedProps.length ) {
+              break;
+            }
+          }
+        }
       }
 
       function parseDataTable() {
@@ -356,7 +413,8 @@ document.addEventListener( 'drop', event => {
         }
 
         var serverClassCount = slice.readShort();
-        for ( var i = 0; i < serverClassCount; i++ ) {
+        var i;
+        for ( i = 0; i < serverClassCount; i++ ) {
           var entry = {};
           entry.nClassID = slice.readShort();
           entry.strName = slice.readCString( 256 );
@@ -384,7 +442,7 @@ document.addEventListener( 'drop', event => {
 
         console.log( 'Flattening data tables...' );
 
-        for ( var i = 0; i < serverClassCount; i++ ) {
+        for ( i = 0; i < serverClassCount; i++ ) {
           flattenDataTable( i );
         }
 
