@@ -34,6 +34,14 @@ export default class BufferReader {
 
   readShort() { return this.readInt16(); }
 
+  readUInt16() {
+    var value = this.buffer.readUInt16LE( this.offset );
+    this.offset += 2;
+    return value;
+  }
+
+  readWord() { return this.readUInt16(); }
+
   readInt32() {
     var value = this.buffer.readInt32LE( this.offset );
     this.offset += 4;
