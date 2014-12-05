@@ -10,46 +10,80 @@ export default class BufferReader {
     this.length = buffer.length;
   }
 
+  peek( length ) {
+    return this.buffer.slice( this.offset, this.offset + length );
+  }
+
   read( length ) {
-    var buffer = this.buffer.slice( this.offset, this.offset + length );
+    var buffer = this.peek( length );
     this.offset += length;
     return buffer;
   }
 
   // Default to little-endian.
+  // uint8.
+  peekUInt8() {
+    return this.buffer.readUInt8( this.offset );
+  }
+
   readUInt8() {
-    var value = this.buffer.readUInt8( this.offset );
+    var value = this.peekUInt8();
     this.offset++;
     return value;
   }
 
+  peekByte() { return this.peekUInt8(); }
   readByte() { return this.readUInt8(); }
+
+  peekChar() { return this.peekUInt8(); }
   readChar() { return this.readUInt8(); }
 
+  // int16.
+  peekInt16() {
+    return this.buffer.readInt16LE( this.offset );
+  }
+
   readInt16() {
-    var value = this.buffer.readInt16LE( this.offset );
+    var value = this.peekInt16();
     this.offset += 2;
     return value;
   }
 
+  peekShort() { return this.peekInt16(); }
   readShort() { return this.readInt16(); }
 
+  // uint16.
+  peekUInt16() {
+    return this.buffer.readUInt16LE( this.offset );
+  }
+
   readUInt16() {
-    var value = this.buffer.readUInt16LE( this.offset );
+    var value = this.peekUInt16();
     this.offset += 2;
     return value;
   }
 
+  peekWord() { return this.peekUInt16(); }
   readWord() { return this.readUInt16(); }
 
+  // int32.
+  peekInt32() {
+    return this.buffer.readInt32LE( this.offset );
+  }
+
   readInt32() {
-    var value = this.buffer.readInt32LE( this.offset );
+    var value = this.peekInt32();
     this.offset += 4;
     return value;
   }
 
+  // float.
+  peekFloat() {
+    return this.buffer.readFloatLE( this.offset );
+  }
+
   readFloat() {
-    var value = this.buffer.readFloatLE( this.offset );
+    var value = this.peekFloat();
     this.offset += 4;
     return value;
   }
