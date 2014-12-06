@@ -41,29 +41,32 @@ export const maskTable = [
 
 export default class BitBuffer {
   constructor( data, bytes, bits = -1 ) {
+    this.inBufWord = 0;
+    this.bitsAvail = 0;
+
     this.data = null;
     this.offset = 0;
 
-    this.bits = -1;
-    this.bytes = 0;
     this.overflow = false;
+    this.dataBits = -1;
+    this.dataBytes = 0;
 
     this.startReading( data, bytes, 0, bits );
   }
 
-  startReading( data, bytes, startBit, bits ) {
+  startReading( data, bytes, startBit = 0, bits = -1 ) {
     this.data = data;
     this.offset = 0;
-    this.bytes = bytes;
+    this.dataBytes = bytes;
 
     if ( bits === -1 ) {
-      this.bits = bytes << 3;
-    } else  {
+      this.dataBits = bytes << 3;
+    } else {
       if ( bits <= bytes * 8 ) {
         throw new Error();
       }
 
-      this.bits = bits;
+      this.dataBits = bits;
     }
 
     this.overflow = false;
@@ -72,4 +75,51 @@ export default class BitBuffer {
     }
   }
 
+  seek( position ) {
+    var success = true;
+    if ( 0 > position || position > this.dataBits ) {
+      this.overflow = true;
+      success = false;
+      position = this.dataBits;
+    }
+
+    // Non-multiple-of-4 bytes at head of buffer. We put the "round off"
+    // at the head to make reading and detecting the end efficient.
+    var head = this.dataBytes & 3;
+
+    var byteOffset = position / 8;
+    if ( this.dataBytes < 4 || ( head && byteOffset < head ) ) {
+      // Partial first dword.
+      if ( this.data ) {
+        this.inBufWord = this.offset++;
+
+        if ( head > 1 ) {
+          this.inBufWord |= ( this.offset++ ) << 8;
+        }
+
+        if ( head > 2 ) {
+          this.inBufWord |= ( this.offset++ ) << 16;
+        }
+
+        this.inBufWord >>= ( position & 31 );
+        this.bitsAvail = ( head << 3 ) - ( position & 31 );
+      }
+    } else {
+      var adjPosition = position - ( head << 3 );
+      this.offset += ( adjPosition / 32 ) << 2 + head;
+      if ( this.data ) {
+        this.bitsAvail = 32;
+        this.grabNextDWord();
+      } else {
+        this.inBufWord = 0;
+        this.bitsAvail = 1;
+      }
+
+      this.inBufWord >>= ( adjPosition  & 31 );
+      // In case grabNextDWord overflowed.
+      this.bitsAvail = Math.min( this.bitsAvail, 32 - ( adjPosition & 31 ) );
+    }
+
+    return success;
+  }
 }
