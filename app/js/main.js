@@ -1,5 +1,6 @@
 import protobuf from 'protocol-buffers';
 import BufferReader from './buffer-reader';
+import BitBufferReader from './bit-buffer-reader';
 import { DemoCommandInfo } from './defs';
 
 // brfs packages.
@@ -199,6 +200,8 @@ document.addEventListener( 'drop', event => {
       var serverClasses = [];
       var dataTables = [];
       var currentExcludes = [];
+      var entities = [];
+      var playerInfos = [];
 
       function readRawData() {
         // Size.
@@ -395,10 +398,7 @@ document.addEventListener( 'drop', event => {
         }
       }
 
-      function parseDataTable() {
-        var size = reader.readInt32();
-        console.log( 'size:', size );
-        var slice = new BufferReader( reader.read( size ) );
+      function parseDataTable( slice ) {
         while ( 1 ) {
           var type = slice.readVarInt32();
 
@@ -415,13 +415,15 @@ document.addEventListener( 'drop', event => {
         var serverClassCount = slice.readShort();
         var i;
         for ( i = 0; i < serverClassCount; i++ ) {
-          var entry = {};
-          entry.nClassID = slice.readShort();
-          entry.strName = slice.readCString( 256 );
-          entry.strDTName = slice.readCString( 256 );
+          var entry = {
+            nClassID: slice.readShort(),
+            strName: slice.readCString( 256 ),
+            strDTName: slice.readCString( 256 ),
+            nDataTable: -1,
+            flattenedProps: []
+          };
 
           // Find the data table by name.
-          entry.nDataTable = -1;
           for ( var j = 0, jl = dataTables.length; j < jl; j++ ) {
             if ( entry.strDTName === dataTables[j].net_table_name ) {
               entry.nDataTable = j;
@@ -457,8 +459,75 @@ document.addEventListener( 'drop', event => {
         return true;
       }
 
-      function dumpStringTables() {
-        readRawData();
+      function dumpStringTable( slice, isUserInfo ) {
+        var stringCount = slice.readWord();
+        console.log( stringCount );
+
+        if ( isUserInfo ) {
+          console.log( 'Clearing player info array.' );
+          playerInfos = [];
+        }
+
+        var stringName;
+        var userDataSize;
+        var data;
+        var i;
+        for ( i = 0; i < stringCount; i++ ) {
+          stringName = slice.readCString( 4096 );
+          if ( stringName.length >= 100 ) {
+            throw new Error();
+          }
+
+          if ( slice.readBit() === 1 ) {
+            userDataSize = slice.readWord();
+            if ( !userDataSize ) {
+              throw new Error();
+            }
+
+            data = slice.readString( userDataSize );
+            if ( isUserInfo && data ) {
+              throw new Error( 'TODO: User info data.' );
+            } else  {
+              console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
+            }
+          } else {
+            console.log( ' ' + i + ', ' + stringName );
+          }
+        }
+
+        // Client side stuff.
+        // Read bit.
+        if ( slice.readBit() === 1 ) {
+          stringCount = slice.readWord();
+          for ( i = 0; i < stringCount; i++ ) {
+            stringName = slice.readCString( 4096 );
+
+            if ( slice.readBit() === 1 ) {
+              userDataSize = slice.readWord();
+              if ( !userDataSize ) {
+                throw new Error();
+              }
+
+              data = slice.readCString( userDataSize + 1 );
+              if ( i >= 2 ) {
+                console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
+              }
+            } else if ( i >= 2 ) {
+              console.log( ' ' + i + ', ' + stringName );
+            }
+          }
+        }
+      }
+
+      function dumpStringTables( slice ) {
+        var tableCount = slice.readByte();
+        for ( var i = 0; i < tableCount; i++ ) {
+          var tableName = slice.readCString( 256 );
+          console.log( 'ReadStringTable:' + tableName + ':' );
+
+          var isUserInfo = tableName === 'userinfo';
+          dumpStringTable( slice, isUserInfo );
+        }
       }
 
       function dumpDemoPacket( start, length ) {
@@ -542,6 +611,7 @@ document.addEventListener( 'drop', event => {
       }
 
       console.log( 'commands' );
+      var size, slice;
       while ( reader.offset < length ) {
         // Read command header.
         // Command.
@@ -572,12 +642,18 @@ document.addEventListener( 'drop', event => {
 
           case DemoMessage.DEM_DATATABLES:
             console.log( 'dem_datatables' );
-            parseDataTable();
+            size = reader.readInt32();
+            console.log( 'size:', size );
+            slice = new BitBufferReader( reader.read( size ) );
+            parseDataTable( slice );
             break;
 
           case DemoMessage.DEM_STRINGTABLES:
             console.log( 'dem_stringtables' );
-            dumpStringTables();
+            size = reader.readInt32();
+            console.log( 'size:', size );
+            slice = new BitBufferReader( reader.read( size ) );
+            dumpStringTables( slice );
             break;
 
           case DemoMessage.DEM_USERCMD:
