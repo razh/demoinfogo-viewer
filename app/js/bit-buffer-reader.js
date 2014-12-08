@@ -1,5 +1,7 @@
 import BufferReader from './buffer-reader';
 
+var Buffer = require( 'buffer' );
+
 var temp = new DataView( new ArrayBuffer( 8 ) );
 
 /**
@@ -38,10 +40,10 @@ export default class BitBufferReader extends BufferReader {
         // Read byte.
         value |= this.buffer[ this.offset ] << i;
         this.offset++;
-        i -= 8;
+        i += 8;
       } else {
         value |= this.readBit() << i;
-        i--;
+        i++;
       }
     }
 
@@ -61,7 +63,7 @@ export default class BitBufferReader extends BufferReader {
 
   read( length ) {
     if ( !this.bitOffset ) {
-      return super();
+      return super( length );
     }
 
     var buffer = new Uint8Array( length );
@@ -69,7 +71,7 @@ export default class BitBufferReader extends BufferReader {
       buffer[i] = this.readUInt8();
     }
 
-    return buffer;
+    return new Buffer( buffer );
   }
 
   readUInt8() {
@@ -110,7 +112,31 @@ export default class BitBufferReader extends BufferReader {
     }
 
     var value = this.readBits( 32 );
-    temp.setUint32( value );
-    return temp.getFloat32();
+    temp.setUint32( 0, value, true );
+    return temp.getFloat32( 0, true );
+  }
+
+  readString( length ) {
+    var array = [];
+    for ( var i = 0; i < length; i++ ) {
+      array.push( this.readUInt8() );
+    }
+
+    return String.fromCharCode( ...array );
+  }
+
+  readCString( length ) {
+    var array = [];
+    var ch;
+    for ( var i = 0; i < length; i++ ) {
+      ch = this.readUInt8();
+      if ( !ch ) {
+        break;
+      }
+
+      array.push( ch );
+    }
+
+    return String.fromCharCode( ...array );
   }
 }
