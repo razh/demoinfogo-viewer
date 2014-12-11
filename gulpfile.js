@@ -2,12 +2,13 @@
 
 var PORT = process.env.PORT || 3000;
 
+var _ = require('lodash');
 var browserSync = require('browser-sync');
 var browserify = require('browserify');
 var brfs = require('brfs');
 var watchify = require('watchify');
+var to5Browserify = require('6to5-browserify');
 var del = require('del');
-var es6ify = require('es6ify');
 var source = require('vinyl-source-stream');
 
 var gulp = require('gulp');
@@ -31,12 +32,14 @@ gulp.task('browser-sync', function() {
 
 gulp.task('js', function() {
   var bundler = watchify(browserify('./app/js/main.js',
-    Object.assign({
+    _.assign({
       debug: true,
     }, watchify.args)));
 
   bundler
-    .transform(es6ify)
+    .transform(to5Browserify.configure({
+      modules: 'commonInterop'
+    }))
     .transform(brfs);
 
   function rebundle() {
@@ -59,11 +62,6 @@ gulp.task('html', function() {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('traceur-runtime', function() {
-  return gulp.src(es6ify.runtime)
-    .pipe(gulp.dest('dist'));
-});
-
 gulp.task('clean', del.bind(null, ['dist']));
 
-gulp.task('default', ['html', 'traceur-runtime', 'js', 'browser-sync']);
+gulp.task('default', ['html', 'js', 'browser-sync']);
