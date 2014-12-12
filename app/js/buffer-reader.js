@@ -77,6 +77,17 @@ export default class BufferReader {
     return value;
   }
 
+  //  uint32.
+  peekUInt32() {
+    return this.buffer.readUInt32LE( this.offset );
+  }
+
+  readUInt32() {
+    var value = this.peekUInt32();
+    this.offset += 4;
+    return value;
+  }
+
   // float.
   peekFloat() {
     return this.buffer.readFloatLE( this.offset );

@@ -32,6 +32,8 @@ export default class BitBufferReader extends BufferReader {
     return bit;
   }
 
+  readBool() { return !!this.readBit(); }
+
   readUBits( bits ) {
     var value = 0;
 
@@ -104,6 +106,14 @@ export default class BitBufferReader extends BufferReader {
     }
 
     return this.readBits( 32 );
+  }
+
+  readUInt32() {
+    if ( !this.bitOffset ) {
+      return super();
+    }
+
+    return this.readUBits( 32 );
   }
 
   readFloat() {

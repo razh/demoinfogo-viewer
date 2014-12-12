@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import protobuf from 'protocol-buffers';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
@@ -146,15 +147,14 @@ document.addEventListener( 'drop', event => {
   event.preventDefault();
 
   Promise.all(
-    Array.from( event.dataTransfer.files )
-      .map(file => {
-        return new Promise(( resolve, reject ) => {
-          var reader = new FileReader();
-          reader.onload = resolve;
-          reader.onerror = reject;
-          reader.readAsArrayBuffer( file.slice( 0, 1 << 19 ) );
-        });
-      })
+    _.map( event.dataTransfer.files, file => {
+      return new Promise(( resolve, reject ) => {
+        var reader = new FileReader();
+        reader.onload = resolve;
+        reader.onerror = reject;
+        reader.readAsArrayBuffer( file.slice( 0, 1 << 19 ) );
+      });
+    })
   ).then( events => {
     return events.map( event => {
       var result = event.srcElement.result;
@@ -545,7 +545,7 @@ document.addEventListener( 'drop', event => {
           console.log( 'command:', command, 'size:', size );
 
           // NET_Messages.
-          var commandType = [
+          var commandType = _.find([
             'NOP',
             'Disconnect',
             'File',
@@ -553,7 +553,7 @@ document.addEventListener( 'drop', event => {
             'StringCmd',
             'SetConVar',
             'SignonState'
-          ].find( type => command === NET_Messages[ 'net_' + type ] );
+          ], type => command === NET_Messages[ 'net_' + type ] );
 
           var commandHandler = null;
           if ( commandType ) {
@@ -561,7 +561,7 @@ document.addEventListener( 'drop', event => {
           }
 
           // SVC_Messages.
-          commandType = commandType || [
+          commandType = commandType || _.find([
             'ServerInfo',
             'SendTable',
             'ClassInfo',
@@ -584,7 +584,7 @@ document.addEventListener( 'drop', event => {
             'Menu',
             'GameEventList',
             'GetCvarValue'
-          ].find( type => command === SVC_Messages[ 'svc_' + type ] );
+          ], type => command === SVC_Messages[ 'svc_' + type ] );
 
           if ( commandType && !commandHandler ) {
             commandHandler = messages[ 'CSVCMsg_' + commandType ];
