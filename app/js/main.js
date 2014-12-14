@@ -18,6 +18,12 @@ const MAX_OSPATH = 260;
 // Largest message that can be sent in bytes.
 const NET_MAX_PAYLOAD = 262144 - 4;
 
+const MAX_PLAYER_NAME_LENGTH = 128;
+// Max 4 files.
+const MAX_CUSTOM_FILES = 4;
+// Hashed CD Key (32 hex alphabetic chars + 0 terminator).
+const SIGNED_GUID_LEN = 32;
+
 const DemoMessage = {
   // Startup message. Process as fast as possible.
   DEM_SIGNON: 1,
@@ -455,8 +461,52 @@ document.addEventListener( 'drop', event => {
         serverClassBits = 0;
         while ( temp >>= 1 ) {  ++serverClassBits; }
         serverClassBits++;
+      }
 
-        return true;
+      function readCRC32( buffer ) {
+        var array = [];
+        for ( var i = 0; i < MAX_CUSTOM_FILES; i++ ) {
+          array.push( buffer.readUInt32() );
+        }
+
+        return array;
+      }
+
+      // userinfo string table contains these.
+      function readPlayerInfo( buffer ) {
+        // Version for future compatibility.
+        var version = buffer.readUBits( 64 );
+        console.log( 'version:', version );
+        // Network xuid.
+        var xuid = buffer.readUBits( 64 );
+        console.log( 'xuid:', xuid );
+        // Scoreboard information.
+        var name = buffer.readString( MAX_PLAYER_NAME_LENGTH );
+        console.log( 'name:', name );
+        // Local server user ID, unique while server is running.
+        var userID = buffer.readInt32();
+        console.log( 'userID:', userID );
+        // Global unique player identifier.
+        var guid = buffer.readString( SIGNED_GUID_LEN + 1 );
+        console.log( 'guid:', guid );
+        // Friend's identification number.
+        var friendsID = buffer.readUInt32();
+        console.log( 'friendsID:', friendsID );
+        // Friend's name.
+        var friendsName = buffer.readString( MAX_PLAYER_NAME_LENGTH );
+        console.log( 'friendsName:', friendsName );
+        // True, if player is a bot controlled by game.dll.
+        var fakeplayer = buffer.readBool();
+        console.log( 'fakeplayer:', fakeplayer );
+        // True, if player is the HLTV proxy.
+        var ishltv = buffer.readBool();
+        console.log( 'ishltv:', ishltv );
+        // Custom files CRC for this player.
+        var customFiles = readCRC32( buffer );
+        console.log( 'customFiles:', customFiles );
+        // This counter increases each time the server has a downloaded a new file.
+        var filesDownloaded = buffer.readUInt8();
+        console.log( 'filesDownloaded:', filesDownloaded );
       }
 
       function dumpStringTable( slice, isUserInfo ) {
@@ -486,6 +536,8 @@ document.addEventListener( 'drop', event => {
 
             data = slice.readString( userDataSize );
             if ( isUserInfo && data ) {
+              console.log( 'adding:player info:' );
+              readPlayerInfo( slice );
               throw new Error( 'TODO: User info data.' );
             } else  {
               console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
