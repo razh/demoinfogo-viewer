@@ -7,7 +7,7 @@ var browserSync = require('browser-sync');
 var browserify = require('browserify');
 var brfs = require('brfs');
 var watchify = require('watchify');
-var to5Browserify = require('6to5-browserify');
+var to5ify = require('6to5ify');
 var del = require('del');
 var source = require('vinyl-source-stream');
 
@@ -37,7 +37,7 @@ gulp.task('js', function() {
     }, watchify.args)));
 
   bundler
-    .transform(to5Browserify.configure({
+    .transform(to5ify.configure({
       modules: 'commonInterop'
     }))
     .transform(brfs);
