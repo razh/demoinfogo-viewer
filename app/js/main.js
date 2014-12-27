@@ -8,6 +8,19 @@ import { DemoCommandInfo } from './defs';
 var fs = require( 'fs' );
 var Buffer = require( 'buffer' ).Buffer;
 
+// Default is to dump out everything.
+var options = {
+  dumpGameEvents: true,
+  supressFootstepEvents: false,
+  showExtraPlayerInfoInGameEvents: true,
+  dumpDeaths: true,
+  supressWarmupDeaths: false,
+  dumpStringTables: true,
+  dumpDataTables: true,
+  dumpPacketEntities: true,
+  dumpNetMessages: true
+};
+
 var netMessages = fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' );
 // console.log( netMessages );
 
@@ -225,6 +238,10 @@ document.addEventListener( 'drop', event => {
       function recvTable_ReadInfos( message ) {
         console.log( message.net_table_name, ':', message.props.length );
 
+        if ( !options.dumpDataTables ) {
+          return;
+        }
+
         for ( var i = 0, il = message.props.length; i < il; i++ ) {
           var sendProp = message.props[i];
           if ( sendProp.type === SendPropType.DPT_DataTable || sendProp.flags & SPROP.EXCLUDE ) {
@@ -437,29 +454,35 @@ document.addEventListener( 'drop', event => {
             }
           }
 
-          console.log(
-            'class:' +
-            entry.nClassID + ':' +
-            entry.strName + ':' +
-            entry.strDTName + '(' +
-            entry.nDataTable + ')'
-          );
+          if ( options.dumpDataTables ) {
+            console.log(
+              'class:' +
+              entry.nClassID + ':' +
+              entry.strName + ':' +
+              entry.strDTName + '(' +
+              entry.nDataTable + ')'
+            );
+          }
 
           serverClasses.push( entry );
         }
 
-        console.log( 'Flattening data tables...' );
+        if ( options.dumpDataTables ) {
+          console.log( 'Flattening data tables...' );
+        }
 
         for ( i = 0; i < serverClassCount; i++ ) {
           flattenDataTable( i );
         }
 
-        console.log( 'Done.' );
+        if ( options.dumpDataTables ) {
+          console.log( 'Done.' );
+        }
 
         // Perform integer log2() to set serverClassBits
         var temp = serverClassCount;
         serverClassBits = 0;
-        while ( temp >>= 1 ) {  ++serverClassBits; }
+        while ( temp >>= 1 ) { ++serverClassBits; }
         serverClassBits++;
       }
 
@@ -511,10 +534,15 @@ document.addEventListener( 'drop', event => {
 
       function dumpStringTable( slice, isUserInfo ) {
         var stringCount = slice.readWord();
-        console.log( stringCount );
+        if ( options.dumpStringTables ) {
+          console.log( stringCount );
+        }
 
         if ( isUserInfo ) {
-          console.log( 'Clearing player info array.' );
+          if ( options.dumpStringTables ) {
+            console.log( 'Clearing player info array.' );
+          }
+
           playerInfos = [];
         }
 
@@ -539,10 +567,10 @@ document.addEventListener( 'drop', event => {
               console.log( 'adding:player info:' );
               readPlayerInfo( slice );
               throw new Error( 'TODO: User info data.' );
-            } else  {
+            } else if ( options.dumpStringTables ) {
               console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
             }
-          } else {
+          } else if ( options.dumpStringTables ) {
             console.log( ' ' + i + ', ' + stringName );
           }
         }
@@ -561,10 +589,10 @@ document.addEventListener( 'drop', event => {
               }
 
               data = slice.readCString( userDataSize + 1 );
-              if ( i >= 2 ) {
+              if ( i >= 2 && options.dumpStringTables ) {
                 console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
               }
-            } else if ( i >= 2 ) {
+            } else if ( i >= 2 && options.dumpStringTables ) {
               console.log( ' ' + i + ', ' + stringName );
             }
           }
@@ -575,7 +603,10 @@ document.addEventListener( 'drop', event => {
         var tableCount = slice.readByte();
         for ( var i = 0; i < tableCount; i++ ) {
           var tableName = slice.readCString( 256 );
-          console.log( 'ReadStringTable:' + tableName + ':' );
+
+          if ( options.dumpStringTables ) {
+            console.log( 'ReadStringTable:' + tableName + ':' );
+          }
 
           var isUserInfo = tableName === 'userinfo';
           dumpStringTable( slice, isUserInfo );
