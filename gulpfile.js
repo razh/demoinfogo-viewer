@@ -37,9 +37,7 @@ gulp.task('js', function() {
     }, watchify.args)));
 
   bundler
-    .transform(to5ify.configure({
-      modules: 'commonInterop'
-    }))
+    .transform(to5ify)
     .transform(brfs);
 
   function rebundle() {
