@@ -1,6 +1,6 @@
 import BufferReader from './buffer-reader';
 
-var Buffer = require( 'buffer' );
+var Buffer = require( 'buffer' ).Buffer;
 
 var temp = new DataView( new ArrayBuffer( 8 ) );
 
@@ -32,7 +32,7 @@ export default class BitBufferReader extends BufferReader {
     return bit;
   }
 
-  readBool() { return !!this.readBit(); }
+  readBool() { return !!this.readUInt8(); }
 
   readUBits( bits ) {
     var value = 0;
@@ -128,8 +128,17 @@ export default class BitBufferReader extends BufferReader {
 
   readString( length ) {
     var array = [];
+    var end = false;
+    var ch;
     for ( var i = 0; i < length; i++ ) {
-      array.push( this.readUInt8() );
+      ch = this.readUInt8();
+      if ( !ch ) {
+        end = true;
+      }
+
+      if ( !end ) {
+        array.push( ch );
+      }
     }
 
     return String.fromCharCode( ...array );

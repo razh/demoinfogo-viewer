@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import protobuf from 'protocol-buffers';
+import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 import { DemoCommandInfo } from './defs';
@@ -383,7 +384,7 @@ document.addEventListener( 'drop', event => {
           }
         }
 
-        priorities.sort((a, b) => a - b);
+        priorities.sort( ( a, b ) => a - b );
 
         // Sort flattenedProps by priority.
         var start = 0;
@@ -495,25 +496,37 @@ document.addEventListener( 'drop', event => {
         return array;
       }
 
+      function lowLevelByteSwap( array ) {
+        return [].slice.call( array ).reverse();
+      }
+
       // userinfo string table contains these.
       function readPlayerInfo( buffer ) {
         // Version for future compatibility.
-        var version = buffer.readUBits( 64 );
+        // 64-bit.
+        var version = buffer.read( 8 );
+        version = new BN( lowLevelByteSwap( version ), 10, 'le' ).toString();
         console.log( 'version:', version );
         // Network xuid.
-        var xuid = buffer.readUBits( 64 );
+        var xuid = buffer.read( 8 );
+        xuid = new BN( lowLevelByteSwap( xuid ), 10, 'le' ).toString();
         console.log( 'xuid:', xuid );
         // Scoreboard information.
         var name = buffer.readString( MAX_PLAYER_NAME_LENGTH );
         console.log( 'name:', name );
         // Local server user ID, unique while server is running.
-        var userID = buffer.readInt32();
+        // 32-bit.
+        var userID = buffer.read( 4 );
+        userID = new Buffer( lowLevelByteSwap( userID ) ).readUInt32LE( 0 );
         console.log( 'userID:', userID );
         // Global unique player identifier.
-        var guid = buffer.readString( SIGNED_GUID_LEN + 1 );
+        // Original length is SIGNED_GUID_LEN + 1.
+        var guid = buffer.readString( SIGNED_GUID_LEN );
         console.log( 'guid:', guid );
         // Friend's identification number.
-        var friendsID = buffer.readUInt32();
+        // Original length is 4 bytes.
+        var friendsID = buffer.read( 8 );
+        friendsID = new Buffer( lowLevelByteSwap( friendsID ) ).readUInt32LE( 0 );
         console.log( 'friendsID:', friendsID );
         // Friend's name.
         var friendsName = buffer.readString( MAX_PLAYER_NAME_LENGTH );
@@ -562,11 +575,10 @@ document.addEventListener( 'drop', event => {
               throw new Error();
             }
 
-            data = slice.readString( userDataSize );
+            data = slice.read( userDataSize );
             if ( isUserInfo && data ) {
               console.log( 'adding:player info:' );
-              readPlayerInfo( slice );
-              throw new Error( 'TODO: User info data.' );
+              readPlayerInfo( new BitBufferReader( data ) );
             } else if ( options.dumpStringTables ) {
               console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
             }
