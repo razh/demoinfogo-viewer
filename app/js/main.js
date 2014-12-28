@@ -237,11 +237,11 @@ document.addEventListener( 'drop', event => {
       }
 
       function recvTable_ReadInfos( message ) {
-        console.log( message.net_table_name, ':', message.props.length );
-
         if ( !options.dumpDataTables ) {
           return;
         }
+
+        console.log( message.net_table_name, ':', message.props.length );
 
         for ( var i = 0, il = message.props.length; i < il; i++ ) {
           var sendProp = message.props[i];
@@ -506,43 +506,60 @@ document.addEventListener( 'drop', event => {
         // 64-bit.
         var version = buffer.read( 8 );
         version = new BN( lowLevelByteSwap( version ), 10, 'le' ).toString();
-        console.log( 'version:', version );
         // Network xuid.
         var xuid = buffer.read( 8 );
         xuid = new BN( lowLevelByteSwap( xuid ), 10, 'le' ).toString();
-        console.log( 'xuid:', xuid );
         // Scoreboard information.
         var name = buffer.readString( MAX_PLAYER_NAME_LENGTH );
-        console.log( 'name:', name );
         // Local server user ID, unique while server is running.
         // 32-bit.
         var userID = buffer.read( 4 );
         userID = new Buffer( lowLevelByteSwap( userID ) ).readUInt32LE( 0 );
-        console.log( 'userID:', userID );
         // Global unique player identifier.
         // Original length is SIGNED_GUID_LEN + 1.
         var guid = buffer.readString( SIGNED_GUID_LEN );
-        console.log( 'guid:', guid );
         // Friend's identification number.
         // Original length is 4 bytes.
         var friendsID = buffer.read( 8 );
         friendsID = new Buffer( lowLevelByteSwap( friendsID ) ).readUInt32LE( 0 );
-        console.log( 'friendsID:', friendsID );
         // Friend's name.
         var friendsName = buffer.readString( MAX_PLAYER_NAME_LENGTH );
-        console.log( 'friendsName:', friendsName );
         // True, if player is a bot controlled by game.dll.
         var fakeplayer = buffer.readBool();
-        console.log( 'fakeplayer:', fakeplayer );
         // True, if player is the HLTV proxy.
         var ishltv = buffer.readBool();
-        console.log( 'ishltv:', ishltv );
         // Custom files CRC for this player.
         var customFiles = readCRC32( buffer );
-        console.log( 'customFiles:', customFiles );
         // This counter increases each time the server has a downloaded a new file.
         var filesDownloaded = buffer.readUInt8();
-        console.log( 'filesDownloaded:', filesDownloaded );
+
+        return {
+          version,
+          xuid,
+          name,
+          userID,
+          guid,
+          friendsID,
+          friendsName,
+          fakeplayer,
+          ishltv,
+          customFiles,
+          filesDownloaded
+        };
+      }
+
+      function printPlayerInfo( playerInfo ) {
+        console.log( 'version:', playerInfo.version );
+        console.log( 'xuid:', playerInfo.xuid );
+        console.log( 'name:', playerInfo.name );
+        console.log( 'userID:', playerInfo.userID );
+        console.log( 'guid:', playerInfo.guid );
+        console.log( 'friendsID:', playerInfo.friendsID );
+        console.log( 'friendsName:', playerInfo.friendsName );
+        console.log( 'fakeplayer:', playerInfo.fakeplayer );
+        console.log( 'ishltv:', playerInfo.ishltv );
+        console.log( 'customFiles:', playerInfo.customFiles );
+        console.log( 'filesDownloaded:', playerInfo.filesDownloaded );
       }
 
       function dumpStringTable( slice, isUserInfo ) {
@@ -562,6 +579,7 @@ document.addEventListener( 'drop', event => {
         var stringName;
         var userDataSize;
         var data;
+        var playerInfo;
         var i;
         for ( i = 0; i < stringCount; i++ ) {
           stringName = slice.readCString( 4096 );
@@ -578,7 +596,12 @@ document.addEventListener( 'drop', event => {
             data = slice.read( userDataSize );
             if ( isUserInfo && data ) {
               console.log( 'adding:player info:' );
-              readPlayerInfo( new BitBufferReader( data ) );
+              playerInfo = readPlayerInfo( new BitBufferReader( data ) );
+              if ( dumpStringTables ) {
+                printPlayerInfo( playerInfo );
+              }
+
+              playerInfos.push( playerInfo );
             } else if ( options.dumpStringTables ) {
               console.log( ' ' + i + ', ' + stringName + ', userdata[' + userDataSize + ']' );
             }
