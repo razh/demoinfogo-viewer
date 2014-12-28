@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 export class Vector {
   constructor( x = 0, y = 0, z = 0 ) {
     this.x = x;
@@ -75,5 +77,33 @@ export class DemoCommandInfo {
 
   static read( reader ) {
     return new DemoCommandInfo().read( reader );
+  }
+}
+
+export class EntityEntry {
+  constructor( entity, classIndex, serialNum ) {
+    this.entity = entity;
+    this.classIndex = classIndex;
+    this.serialNum = serialNum;
+    this.props = [];
+  }
+
+  findProp( name ) {
+    return _.find( this.props, {
+      flattenedProp: {
+        prop: {
+          var_name: name
+        }
+      }
+    });
+  }
+
+  addOrUpdateProp( flattenedProp, propValue ) {
+    var prop = this.findProp( flattenedProp.prop.var_name );
+    if ( prop ) {
+      prop.propValue = propValue;
+    } else {
+      this.props.push( { flattenedProp, propValue } );
+    }
   }
 }

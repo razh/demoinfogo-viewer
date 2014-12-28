@@ -3,7 +3,7 @@ import protobuf from 'protocol-buffers';
 import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
-import { DemoCommandInfo } from './defs';
+import { DemoCommandInfo, EntityEntry } from './defs';
 
 // brfs packages.
 var fs = require( 'fs' );
@@ -485,6 +485,27 @@ document.addEventListener( 'drop', event => {
         serverClassBits = 0;
         while ( temp >>= 1 ) { ++serverClassBits; }
         serverClassBits++;
+      }
+
+      function findEntity( entity ) {
+        return _.find( entities, { entity } );
+      }
+
+      function addEntity( entity, classIndex, serialNum ) {
+        var entityEntry = findEntity( entity );
+        if ( entityEntry ) {
+          entity.classIndex = classIndex;
+          entity.serialNum = serialNum;
+        } else {
+          entityEntry = new EntityEntry( entity, classIndex, serialNum );
+          entities.push( entityEntry );
+        }
+
+        return entityEntry;
+      }
+
+      function removeEntity( entity ) {
+        return _.remove( entities, { entity } );
       }
 
       function readCRC32( buffer ) {
