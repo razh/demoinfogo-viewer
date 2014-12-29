@@ -107,3 +107,26 @@ export class EntityEntry {
     }
   }
 }
+
+export const UpdateType = {
+  // Entity came back into PVS, create new entity if one doesn't exist.
+  EnterPVS: 0,
+  // Entity left PVS.
+  LeavePVS: 1,
+  // There is a delta for this entity.
+  DeltaEnt: 2,
+  // Entity stays alive but no delta ( could be LOD, or just unchanged ).
+  PreserveEnt: 3,
+  // Finished parsing entities successfully.
+  Finished: 4,
+  // Parsing error occured while reading entities.
+  Failed: 5,
+};
+
+// Flags for delta encoding header.
+export const HeaderFlags = {
+  FHDR_ZERO: 0,
+  FHDR_LEAVEPVS: 1,
+  FHDR_DELETE: 2,
+  FHDR_ENTERPVS: 4
+};

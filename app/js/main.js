@@ -3,7 +3,7 @@ import protobuf from 'protocol-buffers';
 import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
-import { DemoCommandInfo, EntityEntry } from './defs';
+import { DemoCommandInfo, EntityEntry, UpdateType, HeaderFlags } from './defs';
 
 // brfs packages.
 var fs = require( 'fs' );
@@ -32,11 +32,21 @@ const MAX_OSPATH = 260;
 // Largest message that can be sent in bytes.
 const NET_MAX_PAYLOAD = 262144 - 4;
 
+// How many bits to use to encode an edict?
+// # of bits needed to represent max edicts.
+const MAX_EDICT_BITS = 11;
+// Max # of edicts in a level.
+const MAX_EDICTS = ( 1 << MAX_EDICT_BITS );
+
+const NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS = 10;
+
 const MAX_PLAYER_NAME_LENGTH = 128;
 // Max 4 files.
 const MAX_CUSTOM_FILES = 4;
 // Hashed CD Key (32 hex alphabetic chars + 0 terminator).
 const SIGNED_GUID_LEN = 32;
+
+const ENTITY_SENTINEL = 9999;
 
 const DemoMessage = {
   // Startup message. Process as fast as possible.
@@ -487,6 +497,8 @@ document.addEventListener( 'drop', event => {
         serverClassBits++;
       }
 
+      function readNewEntity() {}
+
       function findEntity( entity ) {
         return _.find( entities, { entity } );
       }
@@ -506,6 +518,146 @@ document.addEventListener( 'drop', event => {
 
       function removeEntity( entity ) {
         return _.remove( entities, { entity } );
+      }
+
+      function printNetMessagePacketEntities( msg ) {
+        var entityBitBuffer = new BitBufferReader( msg.entity_data );
+
+        var asDelta = msg.is_delta;
+        var headerCount = msg.updated_entries;
+        var baseline = msg.baseline;
+        var updateBaselines = msg.update_baseline;
+        var headerBase = -1;
+        var newEntity = -1;
+        var updateFlags = 0;
+
+        var updateType = UpdateType.PreserveEnt;
+
+        var isEntity;
+        var entity;
+        while ( updateType < UpdateType.Finished ) {
+          headerCount--;
+
+          isEntity = headerCount >= 0;
+          if ( isEntity ) {
+            updateFlags = HeaderFlags.FHDR_ZERO;
+
+            newEntity = headerBase + 1 + entityBitBuffer.readUBitVar();
+            headerBase = newEntity;
+
+            // Leave PVS flag.
+            if ( entityBitBuffer.readBit() === 0 ) {
+              // Enter PVS flag.
+              if ( entityBitBuffer.readBit() !== 0 ) {
+                updateFlags |= HeaderFlags.FHDR_ENTERPVS;
+              }
+            } else {
+              updateFlags |= HeaderFlags.FHDR_LEAVEPVS;
+
+              // Force delete flag.
+              if ( entityBitBuffer.readBit() !== 0 ) {
+                updateFlags |= HeaderFlags.FHDR_DELETE;
+              }
+            }
+          }
+
+          for ( updateType = UpdateType.PreserveEnt;
+                updateType === UpdateType.PreserveEnt; ) {
+            // Figure out what kind of an update this is.
+            if ( isEntity || newEntity > ENTITY_SENTINEL ) {
+              updateType = UpdateType.Finished;
+            } else {
+              if ( updateFlags & HeaderFlags.FHDR_ENTERPVS ) {
+                updateType = UpdateType.EnterPVS;
+              } else if ( updateFlags & HeaderFlags.FHDR_LEAVEPVS ) {
+                updateType = UpdateType.LeavePVS;
+              } else {
+                updateType = UpdateType.DeltaEnt;
+              }
+            }
+          }
+
+          switch ( updateType ) {
+            case UpdateType.EnterPVS:
+              var classIndex = entityBitBuffer.readUBits( serverClassBits );
+              var serialNum = entityBitBuffer.readUBits( NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS );
+              if ( options.dumpPacketEntities ) {
+                console.log(
+                  'Entity Enters PVS: id:' +
+                  newEntity + ', class:' +
+                  classIndex + ', serial:' +
+                  serialNum
+                );
+              }
+
+              entity = addEntity( newEntity, classIndex, serialNum );
+              readNewEntity( entityBitBuffer, entity );
+              break;
+
+            case UpdateType.LeavePVS:
+              // Should never happen on a full update.
+              if ( !asDelta ) {
+                console.error( 'WARNING: LeavePVS on full update.' );
+                updateType = UpdateType.Failed;
+                // Break out.
+                throw new Error();
+              }
+
+              if ( options.dumpPacketEntities ) {
+                if ( updateFlags & HeaderFlags.FHDR_DELETE ) {
+                  console.log( 'Entity leaves PVS and is deleted: id:' + newEntity );
+                } else {
+                  console.log( 'Entity leaves PVS: id:' + newEntity );
+                }
+
+                removeEntity( newEntity );
+              }
+
+              break;
+
+            case UpdateType.DeltaEnt:
+              entity = findEntity( newEntity );
+              if ( entity ) {
+                if ( options.dumpPacketEntities ) {
+                  console.log(
+                    'Entity Delta update: id:' +
+                    entity.entity + ', class:' +
+                    entity.classIndex + ', serial:' +
+                    entity.serialNum
+                  );
+                }
+
+                readNewEntity( entityBitBuffer, entity );
+              } else {
+                throw new Error();
+              }
+
+              break;
+
+            case UpdateType.PreserveEnt:
+              // Should never happen on a full update.
+              if ( !asDelta ) {
+                console.error( 'WARNING: PreserveEnt on full update.' );
+                updateType = UpdateType.Failed;
+                // Break out.
+                throw new Error();
+              }
+
+              if ( newEntity >= MAX_EDICTS ) {
+                console.log( 'PreserveEnt: newEntity == MAX_EDICTS.' );
+                throw new Error();
+              }
+
+              if ( options.dumpPacketEntities ) {
+                console.log( 'PreserveEnt: id:' + newEntity );
+              }
+
+              break;
+
+            default:
+              break;
+          }
+        }
       }
 
       function readCRC32( buffer ) {
