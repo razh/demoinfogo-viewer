@@ -158,4 +158,23 @@ export default class BitBufferReader extends BufferReader {
 
     return String.fromCharCode( ...array );
   }
+
+  readUBitVar() {
+    var ret = this.readUBits( 6 );
+    switch ( ret & ( 16 | 32 ) ) {
+      case 16:
+        ret = ( ret & 15 ) | ( this.readBits( 4 ) << 4 );
+        break;
+
+      case 32:
+        ret = ( ret & 15 ) | ( this.readBits( 8 ) << 4 );
+        break;
+
+      case 48:
+        ret = ( ret & 15 ) | ( this.readBits( 32 - 4 ) << 4 );
+        break;
+    }
+
+    return ret;
+  }
 }
