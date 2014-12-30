@@ -4,6 +4,7 @@ import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 import { DemoCommandInfo, EntityEntry, UpdateType, HeaderFlags } from './defs';
+import { decodeProp } from './prop-decode';
 
 // brfs packages.
 var fs = require( 'fs' );
