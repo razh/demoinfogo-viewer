@@ -284,11 +284,25 @@ document.addEventListener( 'drop', event => {
         }
       }
 
+      function getTableByClassID( classID ) {
+        for ( var i = 0, il = serverClasses.length; i < il; i++ ) {
+          if ( serverClasses[i].classID === classID ) {
+            return dataTables[ serverClasses[i].dataTable ];
+          }
+        }
+      }
+
       function getTableByName( name ) {
         for ( var i = 0, il = dataTables.length; i < il; i++ ) {
           if ( dataTables[i].net_table_name === name ) {
             return dataTables[i];
           }
+        }
+      }
+
+      function getSendPropByIndex( classIndex, index ) {
+        if ( index < serverClasses[ classIndex ].flattenedProps.length ) {
+          return serverClasses[ classIndex ].flattenedProps[ index ];
         }
       }
 
@@ -367,7 +381,7 @@ document.addEventListener( 'drop', event => {
       }
 
       function flattenDataTable( serverClassIndex )  {
-        var table = dataTables[ serverClasses[ serverClassIndex ].nDataTable ];
+        var table = dataTables[ serverClasses[ serverClassIndex ].dataTable ];
 
         currentExcludes = [];
         gatherExcludes( table );
@@ -450,17 +464,17 @@ document.addEventListener( 'drop', event => {
         var i;
         for ( i = 0; i < serverClassCount; i++ ) {
           var entry = {
-            nClassID: slice.readShort(),
-            strName: slice.readCString( 256 ),
-            strDTName: slice.readCString( 256 ),
-            nDataTable: -1,
+            classID: slice.readShort(),
+            name: slice.readCString( 256 ),
+            dtName: slice.readCString( 256 ),
+            dataTable: -1,
             flattenedProps: []
           };
 
           // Find the data table by name.
           for ( var j = 0, jl = dataTables.length; j < jl; j++ ) {
-            if ( entry.strDTName === dataTables[j].net_table_name ) {
-              entry.nDataTable = j;
+            if ( entry.dtName === dataTables[j].net_table_name ) {
+              entry.dataTable = j;
               break;
             }
           }
@@ -468,10 +482,10 @@ document.addEventListener( 'drop', event => {
           if ( options.dumpDataTables ) {
             console.log(
               'class:' +
-              entry.nClassID + ':' +
-              entry.strName + ':' +
-              entry.strDTName + '(' +
-              entry.nDataTable + ')'
+              entry.classID + ':' +
+              entry.name + ':' +
+              entry.dtName + '(' +
+              entry.dataTable + ')'
             );
           }
 
@@ -497,7 +511,62 @@ document.addEventListener( 'drop', event => {
         serverClassBits++;
       }
 
-      function readNewEntity() {}
+      function readFieldIndex( entityBitBuffer, lastIndex, newWay ) {
+        if ( newWay ) {
+          if ( entityBitBuffer.readBit() ) {
+            return lastIndex + 1;
+          }
+        }
+
+        var ret = 0;
+        if ( newWay && entityBitBuffer.readBit() ) {
+          // Read 3 bits.
+          ret = entityBitBuffer.readUBits( 3 );
+        } else {
+          // Read 7 bits.
+          ret = entityBitBuffer.readUBits( 7 );
+          switch ( ret & ( 32 | 64 ) ) {
+          }
+        }
+      }
+
+      function readNewEntity( entityBitBuffer, entity ) {
+        //  0 = old way, 1 = new way.
+        var newWay = entityBitBuffer.readBit() === 1;
+
+        var fieldIndices = [];
+        var index = -1;
+        do {
+          index = readFieldIndex( entityBitBuffer, index, newWay );
+          if ( index !== -1 ) {
+            fieldIndices.push( index );
+          }
+        } while ( index !== -1 );
+
+        var table = getTableByClassID( entity.classIndex );
+        if ( options.dumpPacketEntities ) {
+          console.log( 'Table: ', table.net_table_name );
+        }
+
+        var sendProp;
+        var prop;
+        for ( var i = 0, il = fieldIndices.length; i < il; i++ ) {
+          sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[ i ] );
+          if ( sendProp ) {
+            prop = decodeProp(
+              entityBitBuffer,
+              sendProp,
+              entity.classIndex,
+              fieldIndices[ i ]
+            );
+            entity.addOrUpdateProp( sendProp, prop );
+          } else {
+            return false;
+          }
+        }
+
+        return true;
+      }
 
       function findEntity( entity ) {
         return _.find( entities, { entity } );
