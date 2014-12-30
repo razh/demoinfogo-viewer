@@ -4,7 +4,7 @@ import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 import { DemoCommandInfo, EntityEntry, UpdateType, HeaderFlags } from './defs';
-import { decodeProp } from './prop-decode';
+import { SendPropType, SPROP, decodeProp } from './prop-decode';
 
 // brfs packages.
 var fs = require( 'fs' );
@@ -104,73 +104,6 @@ const SVC_Messages = {
   svc_Menu: 29,
   svc_GameEventList: 30,
   svc_GetCvarValue: 31
-};
-
-// Property decoding.
-const SendPropType = {
-  DPT_Int: 0,
-  DPT_Float: 1,
-  DPT_Vector: 2,
-  // Only encodes the XY of a vector, ignores Z.
-  DPT_VectorXY: 3,
-  DPT_String: 4,
-  // An array of the base types (can't be of datatables).
-  DPT_Array: 5,
-  DPT_DataTable: 6,
-  DPT_Int64: 7,
-  DPT_NUMSendPropTypes: 8
-};
-
-const SPROP = {
-  // Unsigned integer data.
-  UNSIGNED: ( 1 << 0 ),
-  // If this is set, the float/vector is treated like a world coordinate.
-  // Note that the bit count is ignored in this case.
-  COORD: ( 1 << 1 ),
-  // For floating point, don't scale into range, just take value as is.
-  NOSCALE: ( 1 << 2 ),
-  // For floating point, limit high value to range minus one bit unit.
-  ROUNDDOWN: ( 1 << 3 ),
-  // For floating point, limit low value to range minus one bit unit.
-  ROUNDUP: ( 1 << 4 ),
-  // If this is set, the vector is treated like a normal (only valid for vectors).
-  NORMAL: ( 1 << 5 ),
-  // This is an exclude prop (not excludED, but it points at another prop to be excluded).
-  EXCLUDE: ( 1 << 6 ),
-  // Use XYZ/Exponent encoding for vectors.
-  XYZE: ( 1 << 7 ),
-  // This tells us that the property is inside an array, so it shouldn't be put
-  // into the flattened property list. Its array will point at it when it needs to.
-  INSIDEARRAY: ( 1 << 8 ),
-  // Set for datatable props using one of the default datatable proxies like
-  // SendProxy_DataTableToDataTable that always send the data to all clients.
-  PROXY_ALWAYS_YES: ( 1 << 9 ),
-  // Set automatically if SPROP_VECTORELEM is used.
-  IS_A_VECTOR_ELEM: ( 1 << 10 ),
-  // Set automatically if it's a datatable with an offset of 0 that doesn't
-  // change the pointer (ie: for all automatically-chained base classes).
-  COLLAPSIBLE: ( 1 << 11 ),
-  // Like SPROP_COORD, but special handling for multiplayer games.
-  COORD_MP: ( 1 << 12 ),
-  // Like SPROP_COORD, but special handling for multiplayer games where the
-  // fractional component only gets a 3 bits instead of 5.
-  COORD_MP_LOWPRECISION: ( 1 << 13 ),
-  // SPROP_COORD_MP, but coordinates are rounded to integral boundaries.
-  COORD_MP_INTEGRAL: ( 1 << 14 ),
-  // Like SPROP_COORD, but special encoding for cell coordinates that can't be
-  // negative, bit count indicate maximum value.
-  CELL_COORD: ( 1 << 15 ),
-  // Like SPROP_CELL_COORD, but special handling where the fractional component
-  // only gets a 3 bits instead of 5.
-  CELL_COORD_LOWPRECISION: ( 1 << 16 ),
-  // SPROP_CELL_COORD, but coordinates are rounded to integral boundaries.
-  CELL_COORD_INTEGRAL: ( 1 << 17 ),
-  // this is an often changed field, moved to head of sendtable so it gets a
-  // small index.
-  CHANGES_OFTEN: ( 1 << 18 ),
-  // use var int encoded (google protobuf style), note you want to include
-  // SPROP_UNSIGNED if needed, its more efficient.
-  VARINT: ( 1 << 19 )
 };
 
 document.addEventListener( 'drop', event => {

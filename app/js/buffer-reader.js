@@ -212,10 +212,14 @@ export default class BufferReader {
       }
 
       b = this.readUInt8();
-      result = result | ( b & 0x7F ) << ( 7 * count );
+      result |= ( b & 0x7F ) << ( 7 * count );
       count++;
     } while ( b & 0x80 );
 
     return result;
+  }
+
+  readSignedVarInt32() {
+    return bitbuf.zigZagDecode32( this.readVarInt32() );
   }
 }
