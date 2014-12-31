@@ -17,6 +17,10 @@ const COORD_FRACTIONAL_BITS_MP_LOWPRECISION = 3;
 const COORD_DENOMINATOR_LOWPRECISION = ( 1 << COORD_FRACTIONAL_BITS_MP_LOWPRECISION );
 const COORD_RESOLUTION_LOWPRECISION = ( 1.0 / COORD_DENOMINATOR_LOWPRECISION );
 
+const NORMAL_FRACTIONAL_BITS = 11;
+const NORMAL_DENOMINATOR = ( ( 1 << NORMAL_FRACTIONAL_BITS ) - 1 );
+const NORMAL_RESOLUTION = ( 1.0 / NORMAL_DENOMINATOR );
+
 export const BitCoordType = {
   None: 0,
   LowPrecision: 1,
@@ -196,4 +200,147 @@ export default class BitBufferReader extends BufferReader {
 
     return ret;
   }
+
+  readBitCoord() {
+    var value = 0;
+
+    var intValue = 0;
+    var fractValue = 0;
+    var signBit = 0;
+
+    // Read the required integer and fraction flags.
+    intValue = this.readBit();
+    fractValue = this.readBit();
+
+    // If we got either parse them, otherwise it's a zero.
+    if ( intValue || fractValue ) {
+      // Read the sign bit.
+      signBit = this.readBit();
+
+      // If there's an integer, read it in.
+      if ( intValue ) {
+        // Adjust the integers from [0..MAX_COORD_VALUE - 1] to [1..MAX_COORD_VALUE].
+        intValue = this.readUBits( COORD_INTEGER_BITS ) + 1;
+      }
+
+      // If there's a fraction, read it in.
+      if ( fractValue ) {
+        fractValue = this.readUBits( COORD_FRACTIONAL_BITS );
+      }
+
+      // Calculate the correct floating-point value.
+      value = intValue + fractValue * COORD_RESOLUTION;
+
+      // Fix-up the sign if negative.
+      if ( signBit ) {
+        value = -value;
+      }
+    }
+
+    return value;
+  }
+
+  readBitCoordMP( coordType ) {
+    var integral = coordType === BitCoordType.Integral;
+    var lowPrecision = coordType === BitCoordType.LowPrecision;
+
+    var value = 0;
+
+    var intValue = 0;
+    var fractValue = 0;
+    var signBit = 0;
+
+    var inBounds = !!this.readBit();
+
+    if ( integral ) {
+      // Read the required integer and fraction flags.
+      intValue = this.readBit();
+
+      // If we got either parse them, otherwise it's a zero.
+      if ( intValue ) {
+        // Read the sign bit.
+        signBit = this.readBit();
+
+        // If there's an integer, read it in.
+        // Adjust the integers from [0..MAX_COORD_VALUE - 1] to [1..MAX_COORD_VALUE].
+        if ( inBounds ) {
+          value = this.readUBits( COORD_INTEGER_BITS_MP ) + 1;
+        } else {
+          value = this.readUBits( COORD_INTEGER_BITS ) + 1;
+        }
+      }
+    } else {
+      // Read the required integer and fraction flags.
+      intValue = this.readBit();
+
+      // Read the sign bit.
+      signBit = this.readBit();
+
+      // If we got either parse them, otherwise it's a zero.
+      if ( intValue ) {
+        if ( inBounds ) {
+          intValue = this.readUBits( COORD_INTEGER_BITS_MP ) + 1;
+        } else {
+          intValue = this.readUBits( COORD_INTEGER_BITS ) + 1;
+        }
+      }
+
+      // If there's a fraction, read it in.
+      fractValue = this.readUBits( lowPrecision ? COORD_FRACTIONAL_BITS_MP_LOWPRECISION : COORD_FRACTIONAL_BITS );
+
+      // Calculate the correct floating point value.
+      value = intValue + ( fractValue * ( lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION ) );
+    }
+
+    // Fix-up the sign if negative.
+    if ( signBit ) {
+      value = -value;
+    }
+
+    return value;
+  }
+
+  readBitCellCoord( bits, coordType ) {
+    var integral = coordType === BitCoordType.Integral;
+    var lowPrecision = coordType === BitCoordType.LowPrecision;
+
+    var value = 0;
+
+    var intValue = 0;
+    var fractValue = 0;
+
+    if ( integral ) {
+      value = this.readUBits( bits );
+    } else {
+      intValue = this.readUBits( bits );
+
+      // If there's a fraction, read it in.
+      fractValue = this.readUBits( lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION );
+
+      // Calculate the correct floating point value.
+      value = intValue + ( fractValue * ( lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION ) );
+    }
+
+    return value;
+  }
+
+  readBitNormal() {
+    // Read the sign bit.
+    var signBit = this.readBit();
+
+    // Read the fractional part.
+    var fractValue = this.readUBits( NORMAL_FRACTIONAL_BITS );
+
+    // Calculate the correct floating point value.
+    var value = fractValue * NORMAL_RESOLUTION;
+
+    // Fix-up the sign if negative.
+    if ( signBit ) {
+      value = -value;
+    }
+
+    return value;
+  }
+
+  readBitFloat() { return this.readFloat(); }
 }
