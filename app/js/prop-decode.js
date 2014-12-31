@@ -78,9 +78,10 @@ export class Prop {
     this.value = 0;
   }
 
-  print( maxElements ) {
+  toString( maxElements = 0 ) {
     var output = '';
-    if ( maxElements > 0 ) {
+
+    if ( this.numElements > 0 ) {
       output = ' Element: ' +
         ( maxElements ? maxElements : this.numElements ) -
         this.numElements;
@@ -110,11 +111,11 @@ export class Prop {
         break;
     }
 
-    console.log( output );
-
     if ( this.numElements > 1 ) {
-      this[ 1 ].print( maxElements ? maxElements : this.numElements );
+      output += this[ 1 ].toString( maxElements ? maxElements : this.numElements );
     }
+
+    return output;
   }
 }
 
@@ -235,8 +236,8 @@ export function decodeProp(
   var sendProp = flattenedProp.prop;
 
   var result;
-  if ( result.type !== SendPropType.DPT_Array &&
-       result.type !== SendPropType.DPT_DataTable ) {
+  if ( sendProp.type !== SendPropType.DPT_Array &&
+       sendProp.type !== SendPropType.DPT_DataTable ) {
     result = new Prop( sendProp.type );
   }
 
@@ -286,7 +287,7 @@ export function decodeProp(
   }
 
   if ( !quiet ) {
-    result.print();
+    console.log( output + result );
   }
 
   return result;

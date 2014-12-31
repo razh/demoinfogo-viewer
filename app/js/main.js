@@ -241,7 +241,7 @@ document.addEventListener( 'drop', event => {
       }
 
       function gatherExcludes( table ) {
-        for ( var i = 0, il = table.props_size; i < il; i++ ) {
+        for ( var i = 0, il = table.props.length; i < il; i++ ) {
           var sendProp = table.props[i];
           if ( sendProp.flags & SPROP.EXCLUDE ) {
             currentExcludes.push({
@@ -272,7 +272,7 @@ document.addEventListener( 'drop', event => {
       }
 
       function gatherProps_IterateProps( table, serverClassIndex, flattenedProps ) {
-        for ( var i = 0, il = table.props_size; i < il; i++ ) {
+        for ( var i = 0, il = table.props.length; i < il; i++ ) {
           var sendProp = table.props[i];
           if ( sendProp.flags & SPROP.INSIDEARRAY ||
                sendProp.flags & SPROP.EXCLUDE ||
@@ -460,8 +460,26 @@ document.addEventListener( 'drop', event => {
           // Read 7 bits.
           ret = entityBitBuffer.readUBits( 7 );
           switch ( ret & ( 32 | 64 ) ) {
+            case 32:
+              ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 2 ) << 5 );
+              break;
+
+            case 64:
+              ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 4 ) << 5 );
+              break;
+
+            case 96:
+              ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 7 ) << 5 );
+              break;
           }
         }
+
+        // End marker is 4095 for CS:GO.
+        if ( ret === 0xFFF ) {
+          return -1;
+        }
+
+        return lastIndex + 1 + ret;
       }
 
       function readNewEntity( entityBitBuffer, entity ) {
@@ -479,19 +497,20 @@ document.addEventListener( 'drop', event => {
 
         var table = getTableByClassID( entity.classIndex );
         if ( options.dumpPacketEntities ) {
-          console.log( 'Table: ', table.net_table_name );
+          console.log( 'Table: ' + table.net_table_name );
         }
 
         var sendProp;
         var prop;
         for ( var i = 0, il = fieldIndices.length; i < il; i++ ) {
-          sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[ i ] );
+          sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[i] );
           if ( sendProp ) {
             prop = decodeProp(
               entityBitBuffer,
               sendProp,
               entity.classIndex,
-              fieldIndices[ i ]
+              fieldIndices[i],
+              !options.dumpPacketEntities
             );
             entity.addOrUpdateProp( sendProp, prop );
           } else {
@@ -567,7 +586,7 @@ document.addEventListener( 'drop', event => {
           for ( updateType = UpdateType.PreserveEnt;
                 updateType === UpdateType.PreserveEnt; ) {
             // Figure out what kind of an update this is.
-            if ( isEntity || newEntity > ENTITY_SENTINEL ) {
+            if ( !isEntity || newEntity > ENTITY_SENTINEL ) {
               updateType = UpdateType.Finished;
             } else {
               if ( updateFlags & HeaderFlags.FHDR_ENTERPVS ) {
@@ -884,8 +903,13 @@ document.addEventListener( 'drop', event => {
             commandHandler = messages[ 'CSVCMsg_' + commandType ];
           }
 
+          var message = commandHandler.decode( reader.read( size ) );
           console.log( commandHandler );
-          console.log( commandHandler.decode( reader.read( size ) ) );
+          console.log( message );
+
+          if ( commandType === 'PacketEntities' ) {
+            printNetMessagePacketEntities( message );
+          }
         }
       }
 
