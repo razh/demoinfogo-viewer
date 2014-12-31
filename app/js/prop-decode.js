@@ -1,3 +1,5 @@
+import { BitCoordType } from './bit-buffer-reader';
+
 // Property decoding.
 export const SendPropType = {
   DPT_Int: 0,
@@ -134,7 +136,44 @@ function intDecode( entityBitBuffer, sendProp ) {
   }
 }
 
-function floatDecode() {}
+// Look for special flags like SPROP_COORD, SPROP_NOSCALE, and SPROP_NORMAL and
+// decode if they're there. Fills in fVal and returns true if it decodes anything.
+function decodeSpecialFloat( entityBitBuffer, sendProp ) {
+  var flags = sendProp.flags;
+
+  if ( flags & SPROP.COORD ) {
+    return entityBitBuffer.readBitCoord();
+  } else if ( flags & SPROP.COORD_MP ) {
+    return entityBitBuffer.readBitCoordMP( BitCoordType.None );
+  } else if ( flags & SPROP.COORD_MP_LOWPRECISION ) {
+    return entityBitBuffer.readBitCoordMP( BitCoordType.LowPrecision );
+  } else if ( flags & SPROP.COORD_MP_INTEGRAL ) {
+    return entityBitBuffer.readBitCoordMP( BitCoordType.Integral );
+  } else if ( flags & SPROP.NOSCALE ) {
+    return entityBitBuffer.readBitFloat();
+  } else if ( flags & SPROP.NORMAL ) {
+    return entityBitBuffer.readBitNormal();
+  } else if ( flags & SPROP.CELL_COORD ) {
+    return entityBitBuffer.readBitCellCoord( sendProp.num_bits, BitCoordType.None );
+  } else if ( flags & SPROP.CELL_COORD_LOWPRECISION ) {
+    return entityBitBuffer.readBitCellCoord( sendProp.num_bits, BitCoordType.LowPrecision );
+  } else if ( flags & SPROP.CELL_COORD_INTEGRAL ) {
+    return entityBitBuffer.readBitCellCoord( sendProp.num_bits, BitCoordType.Integral );
+  }
+}
+
+function floatDecode( entityBitBuffer, sendProp ) {
+  // Check for special flags.
+  var value = decodeSpecialFloat( entityBitBuffer, sendProp );
+  if ( value !== undefined ) {
+    return value;
+  }
+
+  var interp = entityBitBuffer.readUBits( sendProp.num_bits );
+  value = interp / ( ( 1 << sendProp.num_bits ) - 1 );
+  value = sendProp.low_value + ( sendProp.high_value - sendProp.low_value ) * value;
+  return value;
+}
 
 function vectorDecode( entityBitBuffer, sendProp ) {
   var v = {

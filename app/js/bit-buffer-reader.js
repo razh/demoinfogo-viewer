@@ -4,6 +4,25 @@ var Buffer = require( 'buffer' ).Buffer;
 
 var temp = new DataView( new ArrayBuffer( 8 ) );
 
+// OVERALL Coordinate Size Limits used in COMMON.C MSG_*BitCoord() Routines
+// (and someday the HUD).
+const COORD_INTEGER_BITS = 14;
+const COORD_FRACTIONAL_BITS = 5;
+const COORD_DENOMINATOR = ( 1 << COORD_FRACTIONAL_BITS );
+const COORD_RESOLUTION = ( 1.0 / COORD_DENOMINATOR );
+
+// Special threshold for networking multiplayer origins.
+const COORD_INTEGER_BITS_MP = 11;
+const COORD_FRACTIONAL_BITS_MP_LOWPRECISION = 3;
+const COORD_DENOMINATOR_LOWPRECISION = ( 1 << COORD_FRACTIONAL_BITS_MP_LOWPRECISION );
+const COORD_RESOLUTION_LOWPRECISION = ( 1.0 / COORD_DENOMINATOR_LOWPRECISION );
+
+export const BitCoordType = {
+  None: 0,
+  LowPrecision: 1,
+  Integral: 2
+};
+
 /**
  * Prior art:
  * https://github.com/inolen/bit-buffer
