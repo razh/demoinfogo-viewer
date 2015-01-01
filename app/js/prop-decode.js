@@ -112,7 +112,7 @@ export class Prop {
     }
 
     if ( this.numElements > 1 ) {
-      output += this[ 1 ].toString( maxElements ? maxElements : this.numElements );
+      output += this[1].toString( maxElements ? maxElements : this.numElements );
     }
 
     return output;
@@ -223,7 +223,49 @@ function stringDecode( entityBitBuffer, sendProp ) {
   return entityBitBuffer.readString( length );
 }
 
-function arrayDecode() {}
+function arrayDecode(
+  entityBitBuffer,
+  flattenedProp,
+  numElements,
+  classIndex,
+  fieldIndex,
+  quiet
+) {
+  var maxElements = numElements;
+  var bits = 1;
+  while ( ( maxElements >>= 1 ) !== 0 ) {
+    bits++;
+  }
+
+  var elements = entityBitBuffer.readUBits( bits );
+
+  var result = [];
+  if ( !quiet ) {
+    console.log(
+      'array with ' + elements +
+      ' elements of ' + numElements +
+      'max'
+    );
+  }
+
+  var temp;
+  var elementResult;
+  for ( var i = 0; i < elements; i++ ) {
+    temp = { prop: flattenedProp.arrayElementProp };
+    elementResult = decodeProp(
+      entityBitBuffer,
+      temp,
+      classIndex,
+      fieldIndex,
+      quiet
+    );
+    result[i] = elementResult;
+    result[i].numElements = elements - i;
+  }
+
+  return result;
+}
+
 function int64Decode() {}
 
 export function decodeProp(
