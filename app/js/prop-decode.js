@@ -1,4 +1,4 @@
-import { BitCoordType } from './bit-buffer-reader';
+import { BitCoordType } from './bit-buffer';
 
 // Property decoding.
 export const SendPropType = {

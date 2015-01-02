@@ -1,4 +1,5 @@
 import BufferReader from './buffer-reader';
+import { BitCoordType } from './bit-buffer';
 
 var Buffer = require( 'buffer' ).Buffer;
 
@@ -20,12 +21,6 @@ const COORD_RESOLUTION_LOWPRECISION = ( 1.0 / COORD_DENOMINATOR_LOWPRECISION );
 const NORMAL_FRACTIONAL_BITS = 11;
 const NORMAL_DENOMINATOR = ( ( 1 << NORMAL_FRACTIONAL_BITS ) - 1 );
 const NORMAL_RESOLUTION = ( 1.0 / NORMAL_DENOMINATOR );
-
-export const BitCoordType = {
-  None: 0,
-  LowPrecision: 1,
-  Integral: 2
-};
 
 /**
  * Prior art:
