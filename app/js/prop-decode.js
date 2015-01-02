@@ -74,36 +74,28 @@ const DT_MAX_STRING_BUFFERSIZE = ( 1 << DT_MAX_STRING_BITS );
 export class Prop {
   constructor( type ) {
     this.type = type;
-    this.numElements = 0;
     this.value = 0;
+    this.numElements = 0;
   }
 
   toString( maxElements = 0 ) {
-    var output = '';
-
-    if ( this.numElements > 0 ) {
-      output = ' Element: ' +
-        ( maxElements ? maxElements : this.numElements ) -
-        this.numElements;
-    }
-
     switch ( this.type ) {
       case SendPropType.DPT_Int:
       case SendPropType.DPT_Float:
       case SendPropType.DPT_String:
       case SendPropType.DPT_Int64:
-        output += this.value;
-        break;
+        return this.value;
 
       case SendPropType.DPT_Vector:
-        output += this.value.x + ', ' + this.value.y + ', ' + this.value.z;
-        break;
+        return this.value.x + ', ' + this.value.y + ', ' + this.value.z;
 
       case SendPropType.DPT_VectorXY:
-        output += this.value.x + ', ' + this.value.y;
-        break;
+        return this.value.x + ', ' + this.value.y;
 
       case SendPropType.DPT_Array:
+        return 'array with ' + this.value.length + ' elements of ' +
+          this.numElements + ' max';
+
       case SendPropType.DPT_DataTable:
         break;
 
@@ -111,11 +103,7 @@ export class Prop {
         break;
     }
 
-    if ( this.numElements > 1 ) {
-      output += this[1].toString( maxElements ? maxElements : this.numElements );
-    }
-
-    return output;
+    return '';
   }
 }
 
@@ -240,27 +228,14 @@ function arrayDecode(
   var elements = entityBitBuffer.readUBits( bits );
 
   var result = [];
-  if ( !quiet ) {
-    console.log(
-      'array with ' + elements +
-      ' elements of ' + numElements +
-      'max'
-    );
-  }
-
-  var temp;
-  var elementResult;
   for ( var i = 0; i < elements; i++ ) {
-    temp = { prop: flattenedProp.arrayElementProp };
-    elementResult = decodeProp(
+    result[i] = decodeProp(
       entityBitBuffer,
-      temp,
+      { prop: flattenedProp.arrayElementProp },
       classIndex,
       fieldIndex,
       quiet
     );
-    result[i] = elementResult;
-    result[i].numElements = elements - i;
   }
 
   return result;
@@ -278,8 +253,7 @@ export function decodeProp(
   var sendProp = flattenedProp.prop;
 
   var result;
-  if ( sendProp.type !== SendPropType.DPT_Array &&
-       sendProp.type !== SendPropType.DPT_DataTable ) {
+  if ( sendProp.type !== SendPropType.DPT_DataTable ) {
     result = new Prop( sendProp.type );
   }
 
@@ -310,7 +284,7 @@ export function decodeProp(
       break;
 
     case SendPropType.DPT_Array:
-      result = arrayDecode(
+      result.value = arrayDecode(
         entityBitBuffer,
         flattenedProp,
         sendProp.num_elements,
@@ -318,6 +292,7 @@ export function decodeProp(
         fieldIndex,
         quiet
       );
+      result.numElements = sendProp.num_elements;
       break;
 
     case SendPropType.DPT_DataTable:
