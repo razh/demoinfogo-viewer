@@ -1,6 +1,9 @@
 import _ from 'lodash';
 import protobuf from 'protocol-buffers';
 import BN from 'bn.js';
+
+Object.assign = Object.assign || _.assign;
+
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 import { DemoCommandInfo, EntityEntry, UpdateType, HeaderFlags } from './defs';

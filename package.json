@@ -19,15 +19,15 @@
   "homepage": "https://github.com/razh/demoinfogo-viewer",
   "dependencies": {
     "bn.js": "^0.16.0",
-    "d3": "^3.5.2",
+    "d3": "^3.5.3",
     "lodash": "^2.4.1",
-    "protocol-buffers": "^2.4.2"
+    "protocol-buffers": "^2.4.5"
   },
   "devDependencies": {
-    "6to5ify": "^3.0.0",
+    "6to5ify": "^3.1.0",
     "brfs": "^1.2.0",
     "browser-sync": "^1.8.2",
-    "browserify": "^8.0.2",
+    "browserify": "^8.0.3",
     "del": "^1.1.1",
     "gulp": "^3.8.10",
     "gulp-util": "^3.0.1",
