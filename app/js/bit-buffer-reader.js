@@ -310,7 +310,7 @@ export default class BitBufferReader extends BufferReader {
       intValue = this.readUBits( bits );
 
       // If there's a fraction, read it in.
-      fractValue = this.readUBits( lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION );
+      fractValue = this.readUBits( lowPrecision ? COORD_FRACTIONAL_BITS_MP_LOWPRECISION : COORD_FRACTIONAL_BITS );
 
       // Calculate the correct floating point value.
       value = intValue + ( fractValue * ( lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION ) );
