@@ -89,13 +89,13 @@ export class EntityEntry {
   }
 
   findProp( name ) {
-    return _.find( this.props, {
-      flattenedProp: {
-        prop: {
-          var_name: name
-        }
+    var prop;
+    for ( var i = 0, il = this.props.length; i < il; i++ ) {
+      var prop = this.props[i];
+      if ( prop.flattenedProp.prop.var_name === name ) {
+        return prop;
       }
-    });
+    }
   }
 
   addOrUpdateProp( flattenedProp, propValue ) {

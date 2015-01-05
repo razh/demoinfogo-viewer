@@ -525,7 +525,13 @@ document.addEventListener( 'drop', event => {
       }
 
       function findEntity( entity ) {
-        return _.find( entities, { entity } );
+        var entry;
+        for ( var i = 0, il = entities.length; i < il; i++ ) {
+          entry = entities[i];
+          if ( entry.entity === entity ) {
+            return entry;
+          }
+        }
       }
 
       function addEntity( entity, classIndex, serialNum ) {
