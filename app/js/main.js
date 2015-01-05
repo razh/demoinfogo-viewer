@@ -529,16 +529,17 @@ document.addEventListener( 'drop', event => {
       }
 
       function addEntity( entity, classIndex, serialNum ) {
-        var entityEntry = findEntity( entity );
-        if ( entityEntry ) {
-          entity.classIndex = classIndex;
-          entity.serialNum = serialNum;
+        // If entity already exists, then replace it, else add it.
+        var entry = findEntity( entity );
+        if ( entry ) {
+          entry.classIndex = classIndex;
+          entry.serialNum = serialNum;
         } else {
-          entityEntry = new EntityEntry( entity, classIndex, serialNum );
-          entities.push( entityEntry );
+          entry = new EntityEntry( entity, classIndex, serialNum );
+          entities.push( entry );
         }
 
-        return entityEntry;
+        return entry;
       }
 
       function removeEntity( entity ) {
