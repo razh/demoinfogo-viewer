@@ -29,8 +29,8 @@ const NORMAL_RESOLUTION = ( 1.0 / NORMAL_DENOMINATOR );
  * https://github.com/wiedi/node-bitbuffer/blob/master/bitbuffer.js
  */
 export default class BitBufferReader extends BufferReader {
-  constructor( buffer ) {
-    super( buffer );
+  constructor( buffer, offset ) {
+    super( buffer, offset );
     this.bitOffset = 0;
   }
 

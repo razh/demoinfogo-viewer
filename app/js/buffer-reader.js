@@ -1,9 +1,9 @@
 import { bitbuf } from './bit-buffer';
 
 export default class BufferReader {
-  constructor( buffer ) {
+  constructor( buffer, offset = 0 ) {
     this.buffer = buffer;
-    this.offset = 0;
+    this.offset = offset;
     this.length = buffer.length;
   }
 
