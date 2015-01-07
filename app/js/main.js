@@ -26,11 +26,16 @@ var options = {
   dumpNetMessages: true
 };
 
-var netMessages = fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' );
-// console.log( netMessages );
+// Protocol buffer definitions.
+const messages = protobuf(
+  fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' ) +
+  fs.readFileSync( __dirname + '/../proto/cstrike15_usermessages_public.proto', 'utf8' )
+);
 
-var messages = protobuf( netMessages );
 console.log( messages );
+
+// Constants.
+const { NET_Messages, SVC_Messages, ECstrike15UserMessages } = messages;
 
 const MAX_OSPATH = 260;
 // Largest message that can be sent in bytes.
@@ -72,41 +77,6 @@ const DemoMessage = {
   DEM_STRINGTABLES: 9,
   // Last command. Same as DEM_STRINGTABLES.
   DEM_LASTCMD: 9
-};
-
-const NET_Messages = {
-  net_NOP: 0,
-  net_Disconnect: 1,
-  net_File: 2,
-  net_Tick: 4,
-  net_StringCmd: 5,
-  net_SetConVar: 6,
-  net_SignonState: 7
-};
-
-const SVC_Messages = {
-  svc_ServerInfo: 8,
-  svc_SendTable: 9,
-  svc_ClassInfo: 10,
-  svc_SetPause: 11,
-  svc_CreateStringTable: 12,
-  svc_UpdateStringTable: 13,
-  svc_VoiceInit: 14,
-  svc_VoiceData: 15,
-  svc_Print: 16,
-  svc_Sounds: 17,
-  svc_SetView: 18,
-  svc_FixAngle: 19,
-  svc_CrosshairAngle: 20,
-  svc_BSPDecal: 21,
-  svc_UserMessage: 23,
-  svc_GameEvent: 25,
-  svc_PacketEntities: 26,
-  svc_TempEntities: 27,
-  svc_Prefetch: 28,
-  svc_Menu: 29,
-  svc_GameEventList: 30,
-  svc_GetCvarValue: 31
 };
 
 document.addEventListener( 'drop', event => {
@@ -181,6 +151,75 @@ document.addEventListener( 'drop', event => {
         var size = buffer.readVarInt32();
         // Assume read buffer is byte-aligned.
         return buffer.read( size );
+      }
+
+      function printUserMessage( buffer, command, size ) {
+        console.log( 'command:', command, 'size:', size );
+
+        var commandType = _.find([
+          'VGUIMenu',
+          'Geiger',
+          'Train',
+          'HudText',
+          'SayText',
+          'SayText2',
+          'TextMsg',
+          'HudMsg',
+          'ResetHud',
+          'GameTitle',
+          'Shake',
+          'Fade',
+          'Rumble',
+          'CloseCaption',
+          'CloseCaptionDirect',
+          'SendAudio',
+          'RawAudio',
+          'VoiceMask',
+          'RequestState',
+          'Damage',
+          'RadioText',
+          'HintText',
+          'KeyHintText',
+          'ProcessSpottedEntityUpdate',
+          'ReloadEffect',
+          'AdjustMoney',
+          'UpdateTeamMoney',
+          'StopSpectatorMode',
+          'KillCam',
+          'DesiredTimescale',
+          'CurrentTimescale',
+          'AchievementEvent',
+          'MatchEndConditions',
+          'DisconnectToLobby',
+          'DisplayInventory',
+          'WarmupHasEnded',
+          'ClientInfo',
+          'CallVoteFailed',
+          'VoteStart',
+          'VotePass',
+          'VoteFailed',
+          'VoteSetup',
+          'SendLastKillerDamageToClient',
+          'ItemPickup',
+          'ShowMenu',
+          'BarTime',
+          'AmmoDenied',
+          'MarkAchievement',
+          'ItemDrop',
+          'GlowPropTurnOff'
+        ], type => command === ECstrike15UserMessages[ 'CS_UM_' + type ] );
+
+        var commandHandler = messages[ 'CCSUsrMsg_' + commandType ];
+        var message = commandHandler.decode( buffer );
+
+        console.log( commandHandler );
+        console.log( message );
+      }
+
+      function dumpUserMessage( message ) {
+        var command = message.msg_type;
+        var size = message.msg_data.length;
+        printUserMessage( message.msg_data, command, size );
       }
 
       function recvTable_ReadInfos( message ) {
@@ -919,6 +958,8 @@ document.addEventListener( 'drop', event => {
 
           if ( commandType === 'PacketEntities' ) {
             printNetMessagePacketEntities( message );
+          } else if ( commandType === 'UserMessage' ) {
+            dumpUserMessage( message );
           }
         }
       }
