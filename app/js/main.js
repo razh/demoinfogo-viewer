@@ -133,12 +133,16 @@ document.addEventListener( 'drop', event => {
       var signonLength = reader.readInt32();
       console.log( signonLength );
 
+      var gameEventList;
+
       var serverClassBits = 0;
       var serverClasses = [];
       var dataTables = [];
       var currentExcludes = [];
       var entities = [];
       var playerInfos = [];
+
+      var matchStartOccurred = false;
 
       function readRawData() {
         // Size.
@@ -220,6 +224,84 @@ document.addEventListener( 'drop', event => {
         var command = message.msg_type;
         var size = message.msg_data.length;
         printUserMessage( message.msg_data, command, size );
+      }
+
+      function getGameEventDescriptor( message ) {
+        var descriptor;
+        for ( var i = 0, il = gameEventList.descriptors.length; i < il; i++ ) {
+          descriptor = gameEventList.descriptors[i];
+          if ( descriptor.eventid === message.eventid ) {
+            return descriptor;
+          }
+        }
+      }
+
+      function handlePlayerConnectDisconnectEvents() {}
+
+      function showPlayerInfo() {}
+
+      function handlePlayerDeath() {}
+
+      function parseGameEvent( message, descriptor ) {
+        if ( !descriptor ) {
+          return;
+        }
+
+        if ( !( descriptor.name === 'player_footstep' &&
+                options.supressFootstepEvents ) ) {
+          if ( !handlePlayerConnectDisconnectEvents( message, descriptor ) ) {
+            if ( descriptor.name === 'round_announce_match_start' ) {
+              matchStartOccurred = true;
+            }
+
+            var allowDeathReport = !options.supressWarmupDeaths || matchStartOccurred;
+            if ( descriptor.name === 'death' &&
+                options.dumpDeaths &&
+                allowDeathReport ) {
+              handlePlayerDeath( message, descriptor );
+            }
+
+            var output;
+            if ( options.dumpGameEvents ) {
+              output = descriptor.name + '\n{\n';
+            }
+
+            var key, value;
+            for ( var i = 0, il = message.keys.length; i < il; i++ ) {
+              key = descriptor.keys[i];
+              value = message.keys[i];
+
+              if ( options.dumpGameEvents ) {
+                var handled = false;
+                if ( key.name === 'userid' ||
+                     key.name === 'attacker' ||
+                     key.name === 'assister' ) {
+                  handled = showPlayerInfo(
+                    key.name,
+                    value.val_short,
+                    options.showExtraPlayerInfoInGameEvents
+                  );
+
+                  if ( !handled ) {
+                    output += ' ' + key.name + ': ' + value + '\n';
+                  }
+                }
+              }
+            }
+
+            if ( options.dumpGameEvents ) {
+              output += '}';
+              console.log( output );
+            }
+          }
+        }
+      }
+
+      function printNetMessageGameEvent( message ) {
+        var descriptor = getGameEventDescriptor( message );
+        if ( descriptor ) {
+          parseGameEvent( message, descriptor );
+        }
       }
 
       function recvTable_ReadInfos( message ) {
@@ -591,13 +673,13 @@ document.addEventListener( 'drop', event => {
         return _.remove( entities, { entity } );
       }
 
-      function printNetMessagePacketEntities( msg ) {
-        var entityBitBuffer = new BitBufferReader( msg.entity_data );
+      function printNetMessagePacketEntities( message ) {
+        var entityBitBuffer = new BitBufferReader( message.entity_data );
 
-        var asDelta = msg.is_delta;
-        var headerCount = msg.updated_entries;
-        var baseline = msg.baseline;
-        var updateBaselines = msg.update_baseline;
+        var asDelta = message.is_delta;
+        var headerCount = message.updated_entries;
+        var baseline = message.baseline;
+        var updateBaselines = message.update_baseline;
         var headerBase = -1;
         var newEntity = -1;
         var updateFlags = 0;
@@ -956,10 +1038,14 @@ document.addEventListener( 'drop', event => {
           console.log( commandHandler );
           console.log( message );
 
-          if ( commandType === 'PacketEntities' ) {
-            printNetMessagePacketEntities( message );
-          } else if ( commandType === 'UserMessage' ) {
+          if ( commandType === 'UserMessage' ) {
             dumpUserMessage( message );
+          } else if ( commandType === 'PacketEntities' ) {
+            printNetMessagePacketEntities( message );
+          } else if ( commandType === 'GameEvent' ) {
+            printNetMessageGameEvent( message );
+          } else if ( commandType === 'GameEventList' ) {
+            gameEventList = message;
           }
         }
       }
