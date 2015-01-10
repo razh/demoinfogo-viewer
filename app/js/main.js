@@ -79,6 +79,17 @@ const DemoMessage = {
   DEM_LASTCMD: 9
 };
 
+const GameEventValue = {
+  TYPE_STRING: 1,
+  TYPE_FLOAT: 2,
+  TYPE_LONG: 3,
+  TYPE_SHORT: 4,
+  TYPE_BYTE: 5,
+  TYPE_BOOL: 6,
+  TYPE_UINT64: 7,
+  TYPE_WSTRING: 8
+};
+
 document.addEventListener( 'drop', event => {
   event.stopPropagation();
   event.preventDefault();
@@ -281,10 +292,30 @@ document.addEventListener( 'drop', event => {
                     value.val_short,
                     options.showExtraPlayerInfoInGameEvents
                   );
+                }
 
-                  if ( !handled ) {
-                    output += ' ' + key.name + ': ' + value + '\n';
+                if ( !handled ) {
+                  output += ' ' + key.name + ': ';
+
+                  if ( value.type === GameEventValue.TYPE_STRING ) {
+                    output += value.val_string + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_FLOAT ) {
+                    output += value.val_float + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_LONG ) {
+                    output += value.val_long + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_SHORT ) {
+                    output += value.val_short + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_BYTE ) {
+                    output += value.val_byte + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_BOOL ) {
+                    output += value.val_bool + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_UINT64 ) {
+                    output += value.val_uint64 + ' ';
+                  } else if ( value.type === GameEventValue.TYPE_WSTRING ) {
+                    output += value.val_wstring + ' ';
                   }
+
+                  output += '\n';
                 }
               }
             }
