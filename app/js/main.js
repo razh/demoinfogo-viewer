@@ -247,6 +247,16 @@ document.addEventListener( 'drop', event => {
         }
       }
 
+      function findPlayerEntityIndex( userID ) {
+        for ( var i = 0, il = playerInfos.length; i < il; i++ ) {
+          if ( playerInfos[i].userID === userID ) {
+            return i;
+          }
+        }
+
+        return -1;
+      }
+
       function getGameEventDescriptor( message ) {
         var descriptor;
         for ( var i = 0, il = gameEventList.descriptors.length; i < il; i++ ) {
@@ -335,7 +345,69 @@ document.addEventListener( 'drop', event => {
         return true;
       }
 
-      function showPlayerInfo() {}
+      function showPlayerInfo( field, index, showDetails = true, csv = false ) {
+        var playerInfo = findPlayerInfo( index );
+        if ( !playerInfo ) {
+          return false;
+        }
+
+        if ( csv ) {
+          console.log( field + ', ' + playerInfo.name + ', ' + index );
+        } else {
+          console.log(
+            ' ' + field +
+            ': ' + playerInfo.name +
+            ' (id:' + index + ')'
+          );
+        }
+
+        if ( showDetails ) {
+          var entityIndex = findPlayerEntityIndex( index ) + 1;
+          var entity = findEntity( entityIndex );
+
+          if ( entity ) {
+            var xyProp = entity.findProp( 'm_vecOrigin' );
+            var zProp = entity.findProp( 'm_vecOrigin[2]' );
+
+            if ( xyProp && zProp ) {
+              var { x, y } = xyProp.propValue.value;
+              var z = zProp.propValue.value;
+
+              if ( csv ) {
+                console.log( ', ' + x + ', ' + y + ', ' + z );
+              } else {
+                console.log( '  position: ' + x + ', ' + y +', ' + z );
+              }
+            }
+
+            var angle0Prop = entity.findProp( 'm_angEyeAngles[0]' );
+            var angle1Prop = entity.findProp( 'm_angEyeAngles[1]' );
+
+            if ( angle0Prop && angle1Prop ) {
+              var angle0 = angle0Prop.propValue.value;
+              var angle1 = angle1Prop.propValue.value;
+
+              if ( csv ) {
+                console.log( ', ' + angle0 + ', ' + angle1 );
+              } else {
+                console.log( '  facing: pitch:' + angle0 + ', yaw:' + angle1 );
+              }
+            }
+
+            var teamProp = entity.findProp( 'm_iTeamNum' );
+            if ( teamProp ) {
+              var team = teamProp.propValue.value === 2 ? 'T' : 'CT';
+              if ( csv ) {
+                console.log( ', ' + team );
+              } else {
+                console.log( '  team: '  + team );
+              }
+            }
+          }
+        }
+
+        return true;
+      }
 
       function handlePlayerDeath() {}
 
