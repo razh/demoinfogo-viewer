@@ -237,6 +237,16 @@ document.addEventListener( 'drop', event => {
         printUserMessage( message.msg_data, command, size );
       }
 
+      function findPlayerInfo( userID ) {
+        var playerInfo;
+        for ( var i = 0, il = playerInfos.length; i < il; i++ )  {
+          playerInfo = playerInfos[i];
+          if ( playerInfo.userID === userID ) {
+            return playerInfo;
+          }
+        }
+      }
+
       function getGameEventDescriptor( message ) {
         var descriptor;
         for ( var i = 0, il = gameEventList.descriptors.length; i < il; i++ ) {
@@ -247,7 +257,83 @@ document.addEventListener( 'drop', event => {
         }
       }
 
-      function handlePlayerConnectDisconnectEvents() {}
+      function handlePlayerConnectDisconnectEvents( message, descriptor ) {
+        // Need to handle player_connect and player_disconnect because this is
+        // the only place bots get added to our player info array.
+        // Actual players come in via string tables.
+        var playerDisconnect = descriptor.name === 'player_disconnect';
+        if ( descriptor.name !== 'player_connect' && !playerDisconnect ) {
+          return false;
+        }
+
+        var userid = -1;
+        var index = -1;
+        var name, reason;
+        var bot = false;
+        var key, value;
+        for ( var i = 0, il = message.keys.length; i < il; i++ ) {
+          key = descriptor.key[i];
+          value = message.keys[i];
+
+          if ( key.name === 'userid' ) {
+            userid = value.val_short;
+          } else if ( key.name === 'index' ) {
+            index = value.val_byte;
+          } else if ( key.name === 'name' ) {
+            name = value.val_string;
+          } else if ( key.name === 'networkid' ) {
+            bot = value.val_string === 'BOT';
+          } else if ( key.name === 'bot' ) {
+            bot = value.val_bool;
+          } else if ( key.name === 'reason' ) {
+            reason = value.val_string;
+          }
+        }
+
+        if ( playerDisconnect ) {
+          if ( options.dumpGameEvents ) {
+            console.log(
+              'Player ' + name +
+              ' (id:' + userid +
+              ') disconnected. reason:' + reason
+            );
+          }
+
+          // Mark the player info slot as disconnected.
+          var playerInfo = findPlayerInfo( userid );
+          playerInfo.name = 'disconnected';
+          playerInfo.userID = -1;
+          playerInfo.guid = '';
+        } else {
+          var newPlayer = {};
+          newPlayer.userID = userid;
+          newPlayer.name = name;
+          newPlayer.fakeplayer = bot;
+          if ( bot ) {
+            newPlayer.guid = 'BOT';
+          }
+
+          if ( index < playerInfos.length ) {
+            // Only replace existing player slot if the userID is different
+            // (very unlikely).
+            if ( playerInfos[ index ].userID !== userid ) {
+              playerInfos[ index ] = newPlayer;
+            }
+          } else {
+            if ( options.dumpGameEvents ) {
+              console.log(
+                'Player ' + newPlayer.guid +
+                ' ' + name +
+                ' (id:' + userid + ') connected.'
+              );
+            }
+
+            playerInfos.push( newPlayer );
+          }
+        }
+
+        return true;
+      }
 
       function showPlayerInfo() {}
 
