@@ -409,7 +409,39 @@ document.addEventListener( 'drop', event => {
         return true;
       }
 
-      function handlePlayerDeath() {}
+      function handlePlayerDeath( message, descriptor ) {
+        var userid = -1;
+        var attackerid = -1;
+        var assisterid = 0;
+        var weaponName = '';
+        var headshot = false;
+        var key, value;
+        for ( var i = 0, il = message.keys.length; i < il; i++ ) {
+          key = descriptor.keys[i];
+          value = message.keys[i];
+
+          if ( key.name === 'userid' ) {
+            userid = value.val_short;
+          } else if ( key.name === 'attacker' ) {
+            attackerid = value.val_short;
+          } else if ( key.name === 'assister' ) {
+            assisterid = value.val_short;
+          } else if ( key.name === 'weapon' ) {
+            weaponName = value.val_string;
+          } else if ( key.name === 'headshot' ) {
+            headshot = value.val_bool;
+          }
+        }
+
+        showPlayerInfo( 'victim', userid, true, true );
+        console.log( ', ' );
+        showPlayerInfo( 'attacker', attackerid, true, true );
+        console.log( ', ' + weaponName + ', ' + ( headshot ? 'true' : 'false' ) );
+        if ( assisterid ) {
+          console.log( ', ' );
+          showPlayerInfo( 'assister', assisterid, true, true );
+        }
+      }
 
       function parseGameEvent( message, descriptor ) {
         if ( !descriptor ) {
@@ -430,9 +462,8 @@ document.addEventListener( 'drop', event => {
               handlePlayerDeath( message, descriptor );
             }
 
-            var output;
             if ( options.dumpGameEvents ) {
-              output = descriptor.name + '\n{\n';
+              console.log( descriptor.name + '\n{' );
             }
 
             var key, value;
@@ -453,7 +484,7 @@ document.addEventListener( 'drop', event => {
                 }
 
                 if ( !handled ) {
-                  output += ' ' + key.name + ': ';
+                  var output = ' ' + key.name + ': ';
 
                   if ( value.type === GameEventValue.TYPE_STRING ) {
                     output += value.val_string + ' ';
@@ -473,14 +504,13 @@ document.addEventListener( 'drop', event => {
                     output += value.val_wstring + ' ';
                   }
 
-                  output += '\n';
+                  console.log( output );
                 }
               }
             }
 
             if ( options.dumpGameEvents ) {
-              output += '}';
-              console.log( output );
+              console.log( '}' );
             }
           }
         }
