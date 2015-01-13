@@ -561,6 +561,35 @@ document.addEventListener( 'drop', event => {
         });
       }
 
+      function printNetMessageUpdateStringTable( message ) {
+        var data = new BitBufferReader( message.string_data );
+        if ( message.table_id < stringTables.length &&
+             stringTables[ message.table_id ].maxEntries > message.num_changed_entries ) {
+          var isUserInfo = stringTables[ message.table_id ].name === 'userinfo';
+          if ( options.dumpStringTables ) {
+            console.log(
+              'UpdateStringTable:' +
+              message.table_id + '(' +
+              stringTables[ message.table_id ].name + '):' +
+              message.num_changed_entries + ':'
+            );
+          }
+
+          parseStringTableUpdate(
+            data,
+            message.num_changed_entries,
+            stringTables[ message.table_id ].maxEntries,
+            0, 0, 0,
+            isUserInfo
+          );
+        } else {
+          console.log(
+            'Bad UpdateStringTable:' + message.table_id +
+            ':' + message.num_changed_entries + '!'
+          );
+        }
+      }
+
       function recvTable_ReadInfos( message ) {
         if ( !options.dumpDataTables ) {
           return;
@@ -1297,6 +1326,8 @@ document.addEventListener( 'drop', event => {
 
           if ( commandType === 'CreateStringTable' ) {
             printNetMessageCreateStringTable( message );
+          } else if ( commandType === 'UpdateStringTable' ) {
+            printNetMessageUpdateStringTable( message );
           } else if ( commandType === 'UserMessage' ) {
             dumpUserMessage( message );
           } else if ( commandType === 'PacketEntities' ) {
