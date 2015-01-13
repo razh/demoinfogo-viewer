@@ -143,6 +143,7 @@ document.addEventListener( 'drop', event => {
 
       var gameEventList;
 
+      var stringTables = [];
       var serverClassBits = 0;
       var serverClasses = [];
       var dataTables = [];
@@ -518,6 +519,46 @@ document.addEventListener( 'drop', event => {
         if ( descriptor ) {
           parseGameEvent( message, descriptor );
         }
+      }
+
+      function parseStringTableUpdate(
+        buffer,
+        entries,
+        maxEntries,
+        user_data_size,
+        user_data_size_bits,
+        user_data_fixed_size,
+        isUserInfo
+      ) {}
+
+      function printNetMessageCreateStringTable( message ) {
+        var isUserInfo = message.name === 'userinfo';
+        if ( options.dumpStringTables ) {
+          console.log(
+            'CreateStringTable:' +
+            message.name + ':' +
+            message.max_entries + ':' +
+            message.num_entries + ':' +
+            message.user_data_size + ':' +
+            message.user_data_size_bits + ':'
+          );
+        }
+
+        var data = new BitBufferReader( message.string_data );
+        parseStringTableUpdate(
+          data,
+          message.num_entries,
+          message.max_entries,
+          message.user_data_size,
+          message.user_data_size_bits,
+          message.user_data_fixed_size,
+          isUserInfo
+        );
+
+        stringTables.push({
+          name: message.name,
+          maxEntries: message.max_entries
+        });
       }
 
       function recvTable_ReadInfos( message ) {
@@ -1254,7 +1295,9 @@ document.addEventListener( 'drop', event => {
           console.log( commandHandler );
           console.log( message );
 
-          if ( commandType === 'UserMessage' ) {
+          if ( commandType === 'CreateStringTable' ) {
+            printNetMessageCreateStringTable( message );
+          } else if ( commandType === 'UserMessage' ) {
             dumpUserMessage( message );
           } else if ( commandType === 'PacketEntities' ) {
             printNetMessagePacketEntities( message );
