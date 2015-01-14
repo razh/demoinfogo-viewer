@@ -38,6 +38,19 @@ export default class BitBufferReader extends BufferReader {
     return this.buffer[ this.offset ] >> ( this.bitOffset & 7 ) & 1;
   }
 
+  go( bits ) {
+    this.offset -= Math.floor( bits / 8 );
+    this.bitOffset -= bits % 8;
+
+    if ( this.bitOffset < 0 ) {
+      this.bitOffset = 0;
+      this.offset--;
+    }
+
+    this.offset = Math.max( this.offset, 0 );
+    return this;
+  }
+
   readBit() {
     var bit = this.peekBit();
     this.bitOffset++;
