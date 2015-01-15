@@ -222,6 +222,10 @@ document.addEventListener( 'drop', event => {
           'GlowPropTurnOff'
         ], type => command === ECstrike15UserMessages[ 'CS_UM_' + type ] );
 
+        if ( !commandType ) {
+          return;
+        }
+
         var commandHandler = messages[ 'CCSUsrMsg_' + commandType ];
         var message = commandHandler.decode( buffer );
 
@@ -1315,6 +1319,10 @@ document.addEventListener( 'drop', event => {
             'GameEventList',
             'GetCvarValue'
           ], type => command === SVC_Messages[ 'svc_' + type ] );
+
+          if ( !commandType ) {
+            return;
+          }
 
           if ( commandType && !commandHandler ) {
             commandHandler = messages[ 'CSVCMsg_' + commandType ];
