@@ -44,6 +44,10 @@ const MAX_EDICT_BITS = 11;
 // Max # of edicts in a level.
 const MAX_EDICTS = ( 1 << MAX_EDICT_BITS );
 
+const MAX_USERDATA_BITS = 14;
+const MAX_USERDATA_SIZE = ( 1 << MAX_USERDATA_BITS );
+const SUBSTRING_BITS = 5;
+
 const NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS = 10;
 
 const MAX_PLAYER_NAME_LENGTH = 128;
@@ -529,11 +533,136 @@ document.addEventListener( 'drop', event => {
         buffer,
         entries,
         maxEntries,
-        user_data_size,
-        user_data_size_bits,
-        user_data_fixed_size,
+        userDataSize,
+        userDataSizeBits,
+        userDataFixedSize,
         isUserInfo
-      ) {}
+      ) {
+        var lastEntry = -1;
+        var lastDictionaryIndex = -1;
+
+        // Perform integer log2() to set entryBits.
+        var temp = maxEntries;
+        var entryBits = 0;
+        while ( temp >>= 1 ) { ++entryBits; }
+
+        var encodeUsingDictionaries = buffer.readBit();
+
+        if ( encodeUsingDictionaries ) {
+          console.log( 'ParseStringTableUpdate: Encoded with dictionaries, unable to decode.' );
+          return;
+        }
+
+        var history = [];
+
+        for ( var i = 0; i < entries; i++ ) {
+          var entryIndex = lastEntry + 1;
+
+          if ( !buffer.readBit() ) {
+            entryIndex = buffer.readUBits( entryBits );
+          }
+
+          lastEntry = entryIndex;
+
+          if ( 0 > entryIndex || entryIndex >= maxEntries ) {
+            console.log( 'ParseStringTableUpdate: bogus string index ' + entryIndex );
+            return;
+          }
+
+          var currentEntry;
+          var entry = '';
+          var substr = '';
+
+          if ( buffer.readBit() ) {
+            var substringCheck = buffer.readBit();
+
+            if ( substringCheck ) {
+              var index = buffer.readUBits( 5 );
+              var bytesToCopy = buffer.readUBits( SUBSTRING_BITS );
+              entry = history[ index ].string.slice( 0, bytesToCopy + 1 );
+              substr = buffer.readCString( 1024 );
+              entry += substr;
+            } else {
+              entry = buffer.readCString( 1024 );
+            }
+
+            var currentEntry = entry;
+          }
+
+          // Read in the user data.
+          var tempBuf = '';
+          var userData = null;
+          var bytes = 0;
+
+          if ( buffer.readBit() ) {
+            if ( userDataFixedSize ) {
+              // Don't need to read length, it's fixed length and the length was networked down already.
+              bytes = userDataSize;
+              // Equivalent to a readBits( userDataSizeBits ).
+              tempBuf = buffer.readCString( Math.floor( userDataSizeBits / 8 ) );
+              tempBuf += String.fromCharCode( buffer.readBits( userDataSizeBits % 8 ) );
+            } else {
+              bytes = buffer.readUBits( MAX_USERDATA_BITS );
+              if ( bytes > MAX_USERDATA_SIZE ) {
+                console.log( 'ParseStringTableUpdate: user data too large (' + bytes + ' bytes).');
+                return;
+              }
+
+              tempBuf = buffer.read( bytes );
+            }
+
+            userData = tempBuf;
+          }
+
+          if ( !currentEntry ) {
+            // Avoid crash because of NULL strings.
+            currentEntry = '';
+          }
+
+          if ( isUserInfo && userData ) {
+            var playerInfo = readPlayerInfo( new BitBufferReader( userData ) );
+
+            var added = false;
+            if ( entryIndex < playerInfos.length ) {
+              playerInfos[ entryIndex ] = playerInfo;
+            } else {
+              added = true;
+              playerInfos.push( playerInfo );
+            }
+
+            if ( options.dumpStringTables ) {
+              console.log( 'player info' );
+              console.log( '{' );
+              console.log( ' ' + ( added ? 'adding' : 'updating' ) + ':true' );
+              console.log( ' xuid:' + playerInfo.xuid );
+              console.log( ' name:' + playerInfo.name );
+              console.log( ' userID:' + playerInfo.userID );
+              console.log( ' guid:' + playerInfo.guid );
+              console.log( ' friendsID:' + playerInfo.friendsID );
+              console.log( ' friendsName:' + playerInfo.friendsName );
+              console.log( ' fakeplayer:' + playerInfo.fakeplayer );
+              console.log( ' ishltv:' + playerInfo.ishltv );
+              console.log( ' filesDownloaded:' + playerInfo.filesDownloaded );
+              console.log( '}' );
+            }
+          } else if ( options.dumpStringTables ) {
+            console.log(
+              ' ' + entryIndex +
+              ', ' + currentEntry +
+              ', ' + bytes +
+              ', ' + userData
+            );
+          }
+
+          if ( history.length > 31 ) {
+            history.shift();
+          }
+
+          history.push({
+            string: currentEntry
+          });
+        }
+      }
 
       function printNetMessageCreateStringTable( message ) {
         var isUserInfo = message.name === 'userinfo';
