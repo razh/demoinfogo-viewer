@@ -288,7 +288,7 @@ document.addEventListener( 'drop', event => {
         var bot = false;
         var key, value;
         for ( var i = 0, il = message.keys.length; i < il; i++ ) {
-          key = descriptor.key[i];
+          key = descriptor.keys[i];
           value = message.keys[i];
 
           if ( key.name === 'userid' ) {
