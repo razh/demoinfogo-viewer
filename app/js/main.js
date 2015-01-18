@@ -113,37 +113,37 @@ document.addEventListener( 'drop', event => {
 
       // Demo filestamp. Should be HL2DEMO.
       var demoFilestamp = reader.readString( 8 );
-      console.log( demoFilestamp );
+      console.log( 'demofilestamp:', demoFilestamp );
       // Demo protocol. Should be 4.
       var demoProtocol = reader.readInt32();
-      console.log( demoProtocol );
+      console.log( 'demoProtocol:', demoProtocol );
       // Network protocol. Protocol version.
       var networkProtocol = reader.readInt32();
-      console.log( networkProtocol );
+      console.log( 'networkprotocol:', networkProtocol );
       // Server name.
       var serverName = reader.readString( MAX_OSPATH );
-      console.log( serverName );
+      console.log( 'servername:', serverName );
       // Client name.
       var clientName = reader.readString( MAX_OSPATH );
-      console.log( clientName );
+      console.log( 'clientname:', clientName );
       // Map name.
       var mapName = reader.readString( MAX_OSPATH );
-      console.log( mapName );
+      console.log( 'mapname:', mapName );
       // Game directory.
       var gameDirectory = reader.readString( MAX_OSPATH );
-      console.log( gameDirectory );
+      console.log( 'gamedirectory:', gameDirectory );
       // Playback time.
       var playbackTime = reader.readFloat();
-      console.log( playbackTime );
+      console.log( 'playback_time:', playbackTime );
       // Playback ticks.
       var playbackTicks = reader.readInt32();
-      console.log( playbackTicks );
+      console.log( 'playback_ticks:', playbackTicks );
       // Playback frames.
       var playbackFrames = reader.readInt32();
-      console.log( playbackFrames );
+      console.log( 'playback_frames:', playbackFrames );
       // Sign-on length.
       var signonLength = reader.readInt32();
-      console.log( signonLength );
+      console.log( 'signonlength:', signonLength );
 
       var gameEventList;
 
@@ -634,15 +634,7 @@ document.addEventListener( 'drop', event => {
               console.log( 'player info' );
               console.log( '{' );
               console.log( ' ' + ( added ? 'adding' : 'updating' ) + ':true' );
-              console.log( ' xuid:' + playerInfo.xuid );
-              console.log( ' name:' + playerInfo.name );
-              console.log( ' userID:' + playerInfo.userID );
-              console.log( ' guid:' + playerInfo.guid );
-              console.log( ' friendsID:' + playerInfo.friendsID );
-              console.log( ' friendsName:' + playerInfo.friendsName );
-              console.log( ' fakeplayer:' + playerInfo.fakeplayer );
-              console.log( ' ishltv:' + playerInfo.ishltv );
-              console.log( ' filesDownloaded:' + playerInfo.filesDownloaded );
+              printPlayerInfo( playerInfo );
               console.log( '}' );
             }
           } else if ( options.dumpStringTables ) {
@@ -1294,17 +1286,17 @@ document.addEventListener( 'drop', event => {
       }
 
       function printPlayerInfo( playerInfo ) {
-        console.log( 'version:', playerInfo.version );
-        console.log( 'xuid:', playerInfo.xuid );
-        console.log( 'name:', playerInfo.name );
-        console.log( 'userID:', playerInfo.userID );
-        console.log( 'guid:', playerInfo.guid );
-        console.log( 'friendsID:', playerInfo.friendsID );
-        console.log( 'friendsName:', playerInfo.friendsName );
-        console.log( 'fakeplayer:', playerInfo.fakeplayer );
-        console.log( 'ishltv:', playerInfo.ishltv );
-        console.log( 'customFiles:', playerInfo.customFiles );
-        console.log( 'filesDownloaded:', playerInfo.filesDownloaded );
+        console.log( ' version:' + playerInfo.version );
+        console.log( ' xuid:' + playerInfo.xuid );
+        console.log( ' name:' + playerInfo.name );
+        console.log( ' userID:' + playerInfo.userID );
+        console.log( ' guid:' + playerInfo.guid );
+        console.log( ' friendsID:' + playerInfo.friendsID );
+        console.log( ' friendsName:' + playerInfo.friendsName );
+        console.log( ' fakeplayer:' + playerInfo.fakeplayer );
+        console.log( ' ishltv:' + playerInfo.ishltv );
+        console.log( ' customFiles:' + playerInfo.customFiles );
+        console.log( ' filesDownloaded:' + playerInfo.filesDownloaded );
       }
 
       function dumpStringTable( slice, isUserInfo ) {
