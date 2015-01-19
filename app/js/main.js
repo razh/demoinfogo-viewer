@@ -23,6 +23,10 @@ var options = {
   dumpNetMessages: true
 };
 
+var debug = {
+  verbose: true
+};
+
 // Protocol buffer definitions.
 const messages = protobuf(
   fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' ) +
@@ -259,7 +263,9 @@ document.addEventListener( 'drop', event => {
       }
 
       function printUserMessage( buffer, command, size ) {
-        console.log( 'command:', command, 'size:', size );
+        if ( debug.verbose ) {
+          console.log( 'command:', command, 'size:', size );
+        }
 
         var commandType = _.find(
           UserMessageTypes,
@@ -273,8 +279,10 @@ document.addEventListener( 'drop', event => {
         var commandHandler = messages[ 'CCSUsrMsg_' + commandType ];
         var message = commandHandler.decode( buffer );
 
-        console.log( commandHandler );
-        console.log( message );
+        if ( debug.verbose ) {
+          console.log( commandHandler );
+          console.log( message );
+        }
       }
 
       function dumpUserMessage( message ) {
@@ -1372,9 +1380,9 @@ document.addEventListener( 'drop', event => {
 
             data = slice.read( userDataSize );
             if ( isUserInfo && data ) {
-              console.log( 'adding:player info:' );
               playerInfo = readPlayerInfo( new BitBufferReader( data ) );
-              if ( dumpStringTables ) {
+              if ( options.dumpStringTables ) {
+                console.log( 'adding:player info:' );
                 printPlayerInfo( playerInfo );
               }
 
@@ -1440,7 +1448,9 @@ document.addEventListener( 'drop', event => {
             return;
           }
 
-          console.log( 'command:', command, 'size:', size );
+          if ( debug.verbose ) {
+            console.log( 'command:', command, 'size:', size );
+          }
 
           // NET_Messages.
           commandType = _.find(
@@ -1468,8 +1478,11 @@ document.addEventListener( 'drop', event => {
           }
 
           message = commandHandler.decode( reader.read( size ) );
-          console.log( commandHandler );
-          console.log( message );
+
+          if ( debug.verbose ) {
+            console.log( commandHandler );
+            console.log( message );
+          }
 
           if ( commandType === 'CreateStringTable' ) {
             printNetMessageCreateStringTable( message );
@@ -1489,78 +1502,101 @@ document.addEventListener( 'drop', event => {
 
       function handleDemoPacket() {
         var democmdinfo = DemoCommandInfo.read( reader );
-        console.log( democmdinfo );
 
         // Read sequence info.
         var seqNrIn = reader.readInt32();
         var seqNrOut = reader.readInt32();
-        console.log( 'seqNrIn:', seqNrIn, 'seqNrOut:', seqNrOut );
 
         var length = reader.readInt32();
-        console.log( 'length:', length );
+
+        if ( debug.verbose ) {
+          console.log( democmdinfo );
+          console.log( 'seqNrIn:', seqNrIn, 'seqNrOut:', seqNrOut );
+          console.log( 'length:', length );
+        }
 
         dumpDemoPacket( reader.offset, length );
       }
 
-      console.log( 'commands' );
+      if ( debug.verbose ) {
+        console.log( 'commands' );
+      }
+
       var size, slice;
       while ( reader.offset < length ) {
         // Read command header.
         // Command.
         var command = reader.readUInt8();
-        console.log( 'command:', command );
-
         // Time stamp.
         var timestamp = reader.readInt32();
-        console.log( 'timestamp:', timestamp );
-
         // Player slot.
         var playerSlot = reader.readUInt8();
-        console.log('playerSlot:', playerSlot );
+
+        if ( debug.verbose ) {
+          console.log( 'command:', command );
+          console.log( 'timestamp:', timestamp );
+          console.log( 'playerSlot:', playerSlot );
+        }
 
         switch ( command ) {
           case DemoMessage.DEM_SYNCTICK:
-            console.log( 'dem_synctick' );
+            if ( debug.verbose ) {
+              console.log( 'dem_synctick' );
+            }
             break;
 
           case DemoMessage.DEM_STOP:
-            console.log( 'dem_stop' );
+            if ( debug.verbose ) {
+              console.log( 'dem_stop' );
+            }
             return;
 
           case DemoMessage.DEM_CONSOLECMD:
-            console.log( 'dem_consolecmd' );
+            if ( debug.verbose ) {
+              console.log( 'dem_consolecmd' );
+            }
             readRawData();
             break;
 
           case DemoMessage.DEM_DATATABLES:
-            console.log( 'dem_datatables' );
             size = reader.readInt32();
-            console.log( 'size:', size );
+            if ( debug.verbose ) {
+              console.log( 'dem_datatables' );
+              console.log( 'size:', size );
+            }
             slice = new BitBufferReader( reader.read( size ) );
             parseDataTable( slice );
             break;
 
           case DemoMessage.DEM_STRINGTABLES:
-            console.log( 'dem_stringtables' );
             size = reader.readInt32();
-            console.log( 'size:', size );
+            if ( debug.verbose ) {
+              console.log( 'dem_stringtables' );
+              console.log( 'size:', size );
+            }
             slice = new BitBufferReader( reader.read( size ) );
             dumpStringTables( slice );
             break;
 
           case DemoMessage.DEM_USERCMD:
-            console.log( 'dem_usercmd' );
+            if ( debug.verbose ) {
+              console.log( 'dem_usercmd' );
+            }
             readRawData();
             break;
 
           case DemoMessage.DEM_SIGNON:
           case DemoMessage.DEM_PACKET:
-            console.log( 'dem_signon|dem_packet' );
+            if ( debug.verbose ) {
+              console.log( 'dem_signon|dem_packet' );
+            }
             handleDemoPacket();
             break;
 
           default:
-            console.log( 'default' );
+            if ( debug.verbose ) {
+              console.log( 'default' );
+            }
         }
       }
     });
