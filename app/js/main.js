@@ -91,6 +91,94 @@ const GameEventValue = {
   TYPE_WSTRING: 8
 };
 
+const UserMessageTypes = [
+  'VGUIMenu',
+  'Geiger',
+  'Train',
+  'HudText',
+  'SayText',
+  'SayText2',
+  'TextMsg',
+  'HudMsg',
+  'ResetHud',
+  'GameTitle',
+  'Shake',
+  'Fade',
+  'Rumble',
+  'CloseCaption',
+  'CloseCaptionDirect',
+  'SendAudio',
+  'RawAudio',
+  'VoiceMask',
+  'RequestState',
+  'Damage',
+  'RadioText',
+  'HintText',
+  'KeyHintText',
+  'ProcessSpottedEntityUpdate',
+  'ReloadEffect',
+  'AdjustMoney',
+  'UpdateTeamMoney',
+  'StopSpectatorMode',
+  'KillCam',
+  'DesiredTimescale',
+  'CurrentTimescale',
+  'AchievementEvent',
+  'MatchEndConditions',
+  'DisconnectToLobby',
+  'DisplayInventory',
+  'WarmupHasEnded',
+  'ClientInfo',
+  'CallVoteFailed',
+  'VoteStart',
+  'VotePass',
+  'VoteFailed',
+  'VoteSetup',
+  'SendLastKillerDamageToClient',
+  'ItemPickup',
+  'ShowMenu',
+  'BarTime',
+  'AmmoDenied',
+  'MarkAchievement',
+  'ItemDrop',
+  'GlowPropTurnOff'
+];
+
+const NETMessageTypes = [
+  'NOP',
+  'Disconnect',
+  'File',
+  'Tick',
+  'StringCmd',
+  'SetConVar',
+  'SignonState'
+];
+
+const SVCMessageTypes = [
+  'ServerInfo',
+  'SendTable',
+  'ClassInfo',
+  'SetPause',
+  'CreateStringTable',
+  'UpdateStringTable',
+  'VoiceInit',
+  'VoiceData',
+  'Print',
+  'Sounds',
+  'SetView',
+  'FixAngle',
+  'CrosshairAngle',
+  'BSPDecal',
+  'UserMessage',
+  'GameEvent',
+  'PacketEntities',
+  'TempEntities',
+  'Prefetch',
+  'Menu',
+  'GameEventList',
+  'GetCvarValue'
+];
+
 document.addEventListener( 'drop', event => {
   event.stopPropagation();
   event.preventDefault();
@@ -173,58 +261,10 @@ document.addEventListener( 'drop', event => {
       function printUserMessage( buffer, command, size ) {
         console.log( 'command:', command, 'size:', size );
 
-        var commandType = _.find([
-          'VGUIMenu',
-          'Geiger',
-          'Train',
-          'HudText',
-          'SayText',
-          'SayText2',
-          'TextMsg',
-          'HudMsg',
-          'ResetHud',
-          'GameTitle',
-          'Shake',
-          'Fade',
-          'Rumble',
-          'CloseCaption',
-          'CloseCaptionDirect',
-          'SendAudio',
-          'RawAudio',
-          'VoiceMask',
-          'RequestState',
-          'Damage',
-          'RadioText',
-          'HintText',
-          'KeyHintText',
-          'ProcessSpottedEntityUpdate',
-          'ReloadEffect',
-          'AdjustMoney',
-          'UpdateTeamMoney',
-          'StopSpectatorMode',
-          'KillCam',
-          'DesiredTimescale',
-          'CurrentTimescale',
-          'AchievementEvent',
-          'MatchEndConditions',
-          'DisconnectToLobby',
-          'DisplayInventory',
-          'WarmupHasEnded',
-          'ClientInfo',
-          'CallVoteFailed',
-          'VoteStart',
-          'VotePass',
-          'VoteFailed',
-          'VoteSetup',
-          'SendLastKillerDamageToClient',
-          'ItemPickup',
-          'ShowMenu',
-          'BarTime',
-          'AmmoDenied',
-          'MarkAchievement',
-          'ItemDrop',
-          'GlowPropTurnOff'
-        ], type => command === ECstrike15UserMessages[ 'CS_UM_' + type ] );
+        var commandType = _.find(
+          UserMessageTypes,
+          type => command === ECstrike15UserMessages[ 'CS_UM_' + type ]
+        );
 
         if ( !commandType ) {
           return;
@@ -1386,11 +1426,14 @@ document.addEventListener( 'drop', event => {
       }
 
       function dumpDemoPacket( start, length ) {
+        var command, size;
+        var commandType, commandHandler;
+        var message;
         while ( reader.offset - start < length ) {
-          var command = reader.readVarInt32();
-          var size = reader.readVarInt32();
+          command = reader.readVarInt32();
+          size = reader.readVarInt32();
           if ( reader.offset - start + size > length ) {
-            throw new Error();
+            return;
           }
 
           if ( !size ) {
@@ -1400,46 +1443,21 @@ document.addEventListener( 'drop', event => {
           console.log( 'command:', command, 'size:', size );
 
           // NET_Messages.
-          var commandType = _.find([
-            'NOP',
-            'Disconnect',
-            'File',
-            'Tick',
-            'StringCmd',
-            'SetConVar',
-            'SignonState'
-          ], type => command === NET_Messages[ 'net_' + type ] );
+          commandType = _.find(
+            NETMessageTypes,
+            type => command === NET_Messages[ 'net_' + type ]
+          );
 
-          var commandHandler = null;
+          commandHandler = null;
           if ( commandType ) {
             commandHandler = messages[ 'CNETMsg_' + commandType ];
           }
 
           // SVC_Messages.
-          commandType = commandType || _.find([
-            'ServerInfo',
-            'SendTable',
-            'ClassInfo',
-            'SetPause',
-            'CreateStringTable',
-            'UpdateStringTable',
-            'VoiceInit',
-            'VoiceData',
-            'Print',
-            'Sounds',
-            'SetView',
-            'FixAngle',
-            'CrosshairAngle',
-            'BSPDecal',
-            'UserMessage',
-            'GameEvent',
-            'PacketEntities',
-            'TempEntities',
-            'Prefetch',
-            'Menu',
-            'GameEventList',
-            'GetCvarValue'
-          ], type => command === SVC_Messages[ 'svc_' + type ] );
+          commandType = commandType || _.find(
+            SVCMessageTypes,
+            type => command === SVC_Messages[ 'svc_' + type ]
+          );
 
           if ( !commandType ) {
             return;
@@ -1449,7 +1467,7 @@ document.addEventListener( 'drop', event => {
             commandHandler = messages[ 'CSVCMsg_' + commandType ];
           }
 
-          var message = commandHandler.decode( reader.read( size ) );
+          message = commandHandler.decode( reader.read( size ) );
           console.log( commandHandler );
           console.log( message );
 
