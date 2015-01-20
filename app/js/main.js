@@ -95,93 +95,19 @@ const GameEventValue = {
   TYPE_WSTRING: 8
 };
 
-const UserMessageTypes = [
-  'VGUIMenu',
-  'Geiger',
-  'Train',
-  'HudText',
-  'SayText',
-  'SayText2',
-  'TextMsg',
-  'HudMsg',
-  'ResetHud',
-  'GameTitle',
-  'Shake',
-  'Fade',
-  'Rumble',
-  'CloseCaption',
-  'CloseCaptionDirect',
-  'SendAudio',
-  'RawAudio',
-  'VoiceMask',
-  'RequestState',
-  'Damage',
-  'RadioText',
-  'HintText',
-  'KeyHintText',
-  'ProcessSpottedEntityUpdate',
-  'ReloadEffect',
-  'AdjustMoney',
-  'UpdateTeamMoney',
-  'StopSpectatorMode',
-  'KillCam',
-  'DesiredTimescale',
-  'CurrentTimescale',
-  'AchievementEvent',
-  'MatchEndConditions',
-  'DisconnectToLobby',
-  'DisplayInventory',
-  'WarmupHasEnded',
-  'ClientInfo',
-  'CallVoteFailed',
-  'VoteStart',
-  'VotePass',
-  'VoteFailed',
-  'VoteSetup',
-  'SendLastKillerDamageToClient',
-  'ItemPickup',
-  'ShowMenu',
-  'BarTime',
-  'AmmoDenied',
-  'MarkAchievement',
-  'ItemDrop',
-  'GlowPropTurnOff'
-];
+/**
+ * Invert message objects into arrays for fast lookup.
+ */
+function getMessageTypes( messages, prefix ) {
+  return _.reduce( messages, ( array, value, key ) => {
+    array[ value ] = key.replace( prefix, '' );
+    return array;
+  }, [] );
+}
 
-const NETMessageTypes = [
-  'NOP',
-  'Disconnect',
-  'File',
-  'Tick',
-  'StringCmd',
-  'SetConVar',
-  'SignonState'
-];
-
-const SVCMessageTypes = [
-  'ServerInfo',
-  'SendTable',
-  'ClassInfo',
-  'SetPause',
-  'CreateStringTable',
-  'UpdateStringTable',
-  'VoiceInit',
-  'VoiceData',
-  'Print',
-  'Sounds',
-  'SetView',
-  'FixAngle',
-  'CrosshairAngle',
-  'BSPDecal',
-  'UserMessage',
-  'GameEvent',
-  'PacketEntities',
-  'TempEntities',
-  'Prefetch',
-  'Menu',
-  'GameEventList',
-  'GetCvarValue'
-];
+const UserMessageTypes = getMessageTypes( ECstrike15UserMessages, 'CS_UM_' );
+const NETMessageTypes  = getMessageTypes( NET_Messages, 'net_' );
+const SVCMessageTypes  = getMessageTypes( SVC_Messages, 'svc_' );
 
 function parse( file ) {
   var buffer = new Buffer( new Uint8Array( file ) );
@@ -252,11 +178,7 @@ function parse( file ) {
       console.log( 'command:', command, 'size:', size );
     }
 
-    var commandType = _.find(
-      UserMessageTypes,
-      type => command === ECstrike15UserMessages[ 'CS_UM_' + type ]
-    );
-
+    var commandType = UserMessageTypes[ command ];
     if ( !commandType ) {
       return;
     }
@@ -1437,23 +1359,16 @@ function parse( file ) {
         console.log( 'command:', command, 'size:', size );
       }
 
-      // NET_Messages.
-      commandType = _.find(
-        NETMessageTypes,
-        type => command === NET_Messages[ 'net_' + type ]
-      );
-
       commandHandler = null;
+
+      // NET_Messages.
+      commandType = NETMessageTypes[ command ];
       if ( commandType ) {
         commandHandler = messages[ 'CNETMsg_' + commandType ];
       }
 
       // SVC_Messages.
-      commandType = commandType || _.find(
-        SVCMessageTypes,
-        type => command === SVC_Messages[ 'svc_' + type ]
-      );
-
+      commandType = commandType || SVCMessageTypes[ command ];
       if ( !commandType ) {
         return;
       }
