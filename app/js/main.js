@@ -1012,13 +1012,7 @@ function parse( file ) {
   }
 
   function findEntity( entity ) {
-    var entry;
-    for ( var i = 0, il = entities.length; i < il; i++ ) {
-      entry = entities[i];
-      if ( entry.entity === entity ) {
-        return entry;
-      }
-    }
+    return entities[ entity ];
   }
 
   function addEntity( entity, classIndex, serialNum ) {
@@ -1029,14 +1023,14 @@ function parse( file ) {
       entry.serialNum = serialNum;
     } else {
       entry = new EntityEntry( entity, classIndex, serialNum );
-      entities.push( entry );
+      entities[ entity ] = entry;
     }
 
     return entry;
   }
 
   function removeEntity( entity ) {
-    return _.remove( entities, { entity } );
+    entities[ entity ] = undefined;
   }
 
   function printNetMessagePacketEntities( message ) {
