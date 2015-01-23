@@ -1,6 +1,19 @@
 import _ from 'lodash';
-import { parse } from './demo';
+import dat from 'dat-gui';
+import { parse, options, debug } from './demo';
 
+// Add options interface.
+var gui = new dat.GUI();
+
+var optionsFolder = gui.addFolder( 'options' );
+_( options ).keys().forEach( key => optionsFolder.add( options, key ) );
+optionsFolder.open();
+
+var debugFolder = gui.addFolder( 'debug' );
+debugFolder.add( debug, 'verbose' );
+debugFolder.open();
+
+// Drag and drop.
 document.addEventListener( 'drop', event => {
   event.stopPropagation();
   event.preventDefault();

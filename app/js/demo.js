@@ -11,7 +11,7 @@ var fs = require( 'fs' );
 var Buffer = require( 'buffer' ).Buffer;
 
 // Default is to dump out everything.
-var options = {
+export var options = {
   dumpGameEvents: true,
   supressFootstepEvents: false,
   showExtraPlayerInfoInGameEvents: true,
@@ -23,8 +23,8 @@ var options = {
   dumpNetMessages: true
 };
 
-var debug = {
   verbose: true
+export var debug = {
 };
 
 // Protocol buffer definitions.
