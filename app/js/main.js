@@ -2,16 +2,43 @@ import _ from 'lodash';
 import dat from 'dat-gui';
 import { parse, options, debug } from './demo';
 
-// Add options interface.
-var gui = new dat.GUI();
+function createGUI() {
+  // Add options interface.
+  var gui = new dat.GUI();
 
-var optionsFolder = gui.addFolder( 'options' );
-_( options ).keys().forEach( key => optionsFolder.add( options, key ) );
-optionsFolder.open();
+  var optionsFolder = gui.addFolder( 'options' );
+  _( options ).keys().forEach( key => optionsFolder.add( options, key ) );
+  optionsFolder.open();
 
-var debugFolder = gui.addFolder( 'debug' );
-debugFolder.add( debug, 'verbose' );
-debugFolder.open();
+  var debugFolder = gui.addFolder( 'debug' );
+  debugFolder.add( debug, 'verbose' );
+  debugFolder.open();
+
+  function updateGUI() {
+    _.forOwn( gui.__folders, folder => {
+      _.forEach( folder.__controllers, controller => controller.updateDisplay() );
+    });
+  }
+
+  function toggleAll() {
+    _.forEach( [ options, debug ], object => {
+      _( object )
+        .keys()
+        // Avoid explicit returns of false from exiting iterator.
+        .map( key => object[ key ] = !object[ key ] );
+    });
+
+    updateGUI();
+  }
+
+  gui.add( { toggleAll }, 'toggleAll' );
+
+  // Default to silence.
+  toggleAll();
+}
+
+createGUI();
+
 
 // Drag and drop.
 document.addEventListener( 'drop', event => {

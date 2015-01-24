@@ -23,8 +23,8 @@ export var options = {
   dumpNetMessages: true
 };
 
-  verbose: true
 export var debug = {
+  verbose: true
 };
 
 // Protocol buffer definitions.
