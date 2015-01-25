@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 export class Vector {
   constructor( x = 0, y = 0, z = 0 ) {
     this.x = x;
@@ -91,7 +89,7 @@ export class EntityEntry {
   findProp( name ) {
     var prop;
     for ( var i = 0, il = this.props.length; i < il; i++ ) {
-      var prop = this.props[i];
+      prop = this.props[i];
       if ( prop.flattenedProp.prop.var_name === name ) {
         return prop;
       }
