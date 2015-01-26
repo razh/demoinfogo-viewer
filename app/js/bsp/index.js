@@ -119,9 +119,126 @@ class Header {
   }
 }
 
+class Vector {
+  constructor() {
+    this.x = 0;
+    this.y = 0;
+    this.z = 0;
+  }
+
+  read( reader ) {
+    this.x = reader.readFloat();
+    this.y = reader.readFloat();
+    this.z = reader.readFloat();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Vector().read( reader );
+  }
+}
+
+class Plane {
+  constructor() {
+    // Normal vector.
+    this.normal = null;
+    // Distance from origin.
+    this.dist = 0;
+    // Plane axis identifier.
+    this.type = 0;
+  }
+
+  read( reader ) {
+    this.normal = Vector.read( reader );
+    this.dist = reader.readFloat();
+    this.type = reader.readInt32();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Plane().read( reader );
+  }
+}
+
+class Brush {
+  constructor() {
+    // First brushside.
+    this.firstside = 0;
+    // Number of brushsides.
+    this.numsides = 0;
+    // Contents flags.
+    this.contents = 0;
+  }
+
+  read( reader ) {
+    this.firstside = reader.readInt32();
+    this.numsides = reader.readInt32();
+    this.contents = reader.readInt32();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Brush().read( reader );
+  }
+}
+
+class Brushside {
+  constructor() {
+    // Facing out of the leaf.
+    this.planenum = 0;
+    // Texture info.
+    this.texinfo = 0;
+    // Displacement info.
+    this.dispinfo = 0;
+    // Is the side a bevel plane?
+    this.bevel = 0;
+  }
+
+  read( reader ) {
+    this.planenum = reader.readUInt16();
+    this.texinfo = reader.readShort();
+    this.dispinfo = reader.readShort();
+    this.bevel = reader.readShort();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Brushside().read( reader );
+  }
+}
+
+function readLumpData( reader, lump, type ) {
+  var prevOffset = reader.offset;
+  reader.offset = lump.fileofs;
+
+  var data = [];
+  while ( reader.offset - lump.fileofs < lump.filelen ) {
+    data.push( type.read( reader ) );
+  }
+
+  reader.offset = prevOffset;
+  return data;
+}
+
 export function parse( file ) {
   var buffer = new Buffer( new Uint8Array( file ) );
   var reader = new BufferReader( buffer );
 
-  console.log( Header.read( reader ) );
+  var header = Header.read( reader );
+  console.log( header );
+
+  // Planes.
+  var planesLump = header.lumps[ LUMP.PLANES ];
+  var planes = readLumpData( reader, planesLump, Plane );
+  console.log( planes );
+
+  // Brushes.
+  var brushesLump = header.lumps[ LUMP.BRUSHES ];
+  var brushes = readLumpData( reader, brushesLump, Brush );
+  console.log( brushes );
+
+  // Brushsides.
+  var brushsidesLump = header.lumps[ LUMP.BRUSHSIDES ];
+  var brushsides = readLumpData( reader, brushsidesLump, Brushside );
+  console.log( brushsides );
 }
