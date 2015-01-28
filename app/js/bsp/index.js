@@ -301,13 +301,13 @@ class Brushside {
   }
 }
 
-function readLumpData( reader, lump, type ) {
+function readLumpData( reader, lump, read ) {
   var prevOffset = reader.offset;
   reader.offset = lump.fileofs;
 
   var data = [];
   while ( reader.offset - lump.fileofs < lump.filelen ) {
-    data.push( type.read( reader ) );
+    data.push( read( reader ) );
   }
 
   reader.offset = prevOffset;
@@ -323,31 +323,41 @@ export function parse( file ) {
 
   // Planes.
   var planesLump = header.lumps[ LUMP.PLANES ];
-  var planes = readLumpData( reader, planesLump, Plane );
+  var planes = readLumpData( reader, planesLump, Plane.read );
   console.log( planes );
 
   // Vertexes.
   var vertexesLump = header.lumps[ LUMP.VERTEXES ];
-  var vertexes = readLumpData( reader, vertexesLump, Vector );
+  var vertexes = readLumpData( reader, vertexesLump, Vector.read );
   console.log( vertexes );
 
   // Edges.
   var edgesLump = header.lumps[ LUMP.EDGES ];
-  var edges = readLumpData( reader, edgesLump, Edge );
+  var edges = readLumpData( reader, edgesLump, Edge.read );
   console.log( edges );
+
+  // Surfedges.
+  // Signed ints.
+  var surfedgesLump = header.lumps[ LUMP.SURFEDGES ];
+  var surfedges = readLumpData(
+    reader,
+    surfedgesLump,
+    reader => reader.readInt32()
+  );
+  console.log( surfedges );
 
   // Faces.
   var facesLump = header.lumps[ LUMP.FACES ];
-  var faces = readLumpData( reader, facesLump, Face );
+  var faces = readLumpData( reader, facesLump, Face.read );
   console.log( faces );
 
   // Brushes.
   var brushesLump = header.lumps[ LUMP.BRUSHES ];
-  var brushes = readLumpData( reader, brushesLump, Brush );
+  var brushes = readLumpData( reader, brushesLump, Brush.read );
   console.log( brushes );
 
   // Brushsides.
   var brushsidesLump = header.lumps[ LUMP.BRUSHSIDES ];
-  var brushsides = readLumpData( reader, brushsidesLump, Brushside );
+  var brushsides = readLumpData( reader, brushsidesLump, Brushside.read );
   console.log( brushsides );
 }
