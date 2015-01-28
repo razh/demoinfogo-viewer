@@ -6,6 +6,8 @@ var Buffer = require( 'buffer' ).Buffer;
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/mp/src/public/bspfile.h
 const HEADER_LUMPS = 64;
 
+const MAXLIGHTMAPS = 4;
+
 // Lump types.
 // NOTE: This list is incomplete.
 const LUMP = {
@@ -160,6 +162,98 @@ class Plane {
   }
 }
 
+class Edge {
+  constructor() {
+    // Vertex indices.
+    this.v = [];
+  }
+
+  read( reader ) {
+    this.v = [ reader.readUInt16(), reader.readUInt16() ];
+    return this;
+  }
+
+  static read( reader ) {
+    return new Edge().read( reader );
+  }
+}
+
+class Face {
+  constructor() {
+    // Plane number.
+    this.planenum = 0;
+    // Faces opposite to the node's plane direction.
+    this.side = 0;
+    // 1 if on node, 0 if in leaf.
+    this.onNode = 0;
+    // Index into surfedges.
+    this.firstedge = 0;
+    // Number of surfedges.
+    this.numedges = 0;
+    // Texture info.
+    this.texinfo = 0;
+    // Displacement info.
+    this.dispinfo = 0;
+    // Surfaces that are boundaries of fog volumes.
+    this.surfaceFogVolumeID = 0;
+    // Switchable lighting info.
+    this.styles = [];
+    // Offset into lightmap lump.
+    this.lightofs = 0;
+    // Face area in units^2.
+    this.area = 0;
+    // Texture lighting info.
+    this.lightmapTextureMinsInLuxels = [];
+    this.lightmapTextureSizeInLuxels = [];
+    // Original face this was split from.
+    this.origFace = 0;
+    // Primitives.
+    this.numPrims = 0;
+    this.firstPrimID = 0;
+    // Lightmap smoothing group.
+    this.smoothingGroups = 0;
+  }
+
+  read( reader ) {
+    this.planenum = reader.readUInt16();
+    this.side = reader.readByte();
+    this.onNode = reader.readByte();
+    this.firstedge = reader.readInt32();
+    this.numedges = reader.readShort();
+    this.texinfo = reader.readShort();
+    this.dispinfo = reader.readShort();
+    this.surfaceFogVolumeID = reader.readShort();
+
+    this.styles = [];
+    for ( var i = 0; i < MAXLIGHTMAPS; i++ ) {
+      this.styles.push( reader.readByte() );
+    }
+
+    this.lightofs = reader.readInt32();
+    this.area = reader.readFloat();
+
+    this.lightmapTextureMinsInLuxels = [
+      reader.readInt32(),
+      reader.readInt32()
+    ];
+
+    this.lightmapTextureSizeInLuxels = [
+      reader.readInt32(),
+      reader.readInt32()
+    ];
+
+    this.origFace = reader.readInt32();
+    this.numPrims = reader.readUInt16();
+    this.firstPrimID = reader.readUInt16();
+    this.smoothingGroups = reader.readUInt32();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Face().read( reader );
+  }
+}
+
 class Brush {
   constructor() {
     // First brushside.
@@ -231,6 +325,21 @@ export function parse( file ) {
   var planesLump = header.lumps[ LUMP.PLANES ];
   var planes = readLumpData( reader, planesLump, Plane );
   console.log( planes );
+
+  // Vertexes.
+  var vertexesLump = header.lumps[ LUMP.VERTEXES ];
+  var vertexes = readLumpData( reader, vertexesLump, Vector );
+  console.log( vertexes );
+
+  // Edges.
+  var edgesLump = header.lumps[ LUMP.EDGES ];
+  var edges = readLumpData( reader, edgesLump, Edge );
+  console.log( edges );
+
+  // Faces.
+  var facesLump = header.lumps[ LUMP.FACES ];
+  var faces = readLumpData( reader, facesLump, Face );
+  console.log( faces );
 
   // Brushes.
   var brushesLump = header.lumps[ LUMP.BRUSHES ];
