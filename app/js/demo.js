@@ -541,7 +541,7 @@ export function parse( file ) {
           entry = buffer.readCString( 1024 );
         }
 
-        var currentEntry = entry;
+        currentEntry = entry;
       }
 
       // Read in the user data.

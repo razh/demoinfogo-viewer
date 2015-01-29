@@ -7,7 +7,7 @@ function createGUI() {
   var gui = new dat.GUI();
 
   var optionsFolder = gui.addFolder( 'options' );
-  _( options ).keys().forEach( key => optionsFolder.add( options, key ) );
+  _.forOwn( options, ( value, key ) => optionsFolder.add( options, key ) );
   optionsFolder.open();
 
   var debugFolder = gui.addFolder( 'debug' );
@@ -22,10 +22,8 @@ function createGUI() {
 
   function toggleAll() {
     _.forEach( [ options, debug ], object => {
-      _( object )
-        .keys()
-        // Avoid explicit returns of false from exiting iterator.
-        .map( key => object[ key ] = !object[ key ] );
+      // Avoid explicit returns of false from exiting iterator.
+      _.map( object, ( value, key ) => object[ key ] = !value );
     });
 
     updateGUI();

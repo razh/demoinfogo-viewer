@@ -96,7 +96,7 @@ export default class BitBufferReader extends BufferReader {
 
   read( length ) {
     if ( !this.bitOffset ) {
-      return super( length );
+      return super.read( length );
     }
 
     var buffer = new Uint8Array( length );
@@ -109,7 +109,7 @@ export default class BitBufferReader extends BufferReader {
 
   readUInt8() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readUInt8();
     }
 
     return this.readUBits( 8 );
@@ -117,7 +117,7 @@ export default class BitBufferReader extends BufferReader {
 
   readInt16() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readInt16();
     }
 
     return this.readBits( 16 );
@@ -125,7 +125,7 @@ export default class BitBufferReader extends BufferReader {
 
   readUInt16() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readUInt16();
     }
 
     return this.readUBits( 16 );
@@ -133,7 +133,7 @@ export default class BitBufferReader extends BufferReader {
 
   readInt32() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readInt32();
     }
 
     return this.readBits( 32 );
@@ -141,7 +141,7 @@ export default class BitBufferReader extends BufferReader {
 
   readUInt32() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readUInt32();
     }
 
     return this.readUBits( 32 );
@@ -149,7 +149,7 @@ export default class BitBufferReader extends BufferReader {
 
   readFloat() {
     if ( !this.bitOffset ) {
-      return super();
+      return super.readFloat();
     }
 
     var value = this.readBits( 32 );
