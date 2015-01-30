@@ -3,13 +3,16 @@
 var PORT = process.env.PORT || 3000;
 
 var _ = require('lodash');
-var browserSync = require('browser-sync');
-var browserify = require('browserify');
 var brfs = require('brfs');
-var watchify = require('watchify');
-var to5ify = require('6to5ify');
+var browserify = require('browserify');
+var browserifyShim = require('browserify-shim');
+var browserSync = require('browser-sync');
 var del = require('del');
+var mainBowerFiles = require('main-bower-files');
+var runSequence = require('run-sequence');
 var source = require('vinyl-source-stream');
+var to5ify = require('6to5ify');
+var watchify = require('watchify');
 
 var gulp = require('gulp');
 var util = require('gulp-util');
@@ -38,7 +41,8 @@ gulp.task('js', function() {
 
   bundler
     .transform(to5ify)
-    .transform(brfs);
+    .transform(brfs)
+    .transform(browserifyShim);
 
   function rebundle() {
     return bundler.bundle()
@@ -60,6 +64,17 @@ gulp.task('html', function() {
     .pipe(gulp.dest('dist'));
 });
 
+gulp.task('bower', function() {
+  return gulp.src(mainBowerFiles())
+    .pipe(gulp.dest('dist'));
+});
+
 gulp.task('clean', del.bind(null, ['dist']));
 
-gulp.task('default', ['html', 'js', 'browser-sync']);
+gulp.task('default', ['clean'], function(cb) {
+  return runSequence(
+    ['html', 'bower', 'js'],
+    'browser-sync',
+    cb
+  );
+});
