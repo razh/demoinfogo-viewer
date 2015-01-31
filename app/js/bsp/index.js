@@ -301,6 +301,77 @@ class Brushside {
   }
 }
 
+const SURF = {
+  // Value will hold the light strength.
+  LIGHT: 0x0001,
+  // Don't draw, indicates we should skylight and draw 2d sky but not draw the
+  // 3D skybox.
+  SKY2D: 0x0002,
+  // Don't draw, but add to skybox.
+  SKY: 0x0004,
+  // Turbulent water warp.
+  WARP: 0x0008,
+  TRANS: 0x0010,
+  // The surface can not have a portal placed on it.
+  NOPORTAL: 0x0020,
+  // FIXME: This is an xbox hack to work around elimination of trigger
+  // surfaces, which breaks occluders.
+  TRIGGER: 0x0040,
+  // Don't bother referencing the texture.
+  NODRAW: 0x0080,
+  // Make a primary bsp splitter.
+  HINT: 0x0100,
+  // Completely ignore, allowing non-closed brushes.
+  SKIP: 0x0200,
+  // Don't calculate light.
+  NOLIGHT: 0x0400,
+  // Calculate three lightmaps for the surface for bumpmapping.
+  BUMPLIGHT: 0x0800,
+  // Don't receive shadows.
+  NOSHADOWS: 0x1000,
+  // Don't receive decals.
+  NODECALS: 0x2000,
+  // Don't subdivide patches on this surface.
+  NOCHOP: 0x4000,
+  // Surface is part of a hitbox.
+  HITBOX: 0x8000
+};
+
+function readFloats( reader, n ) {
+  var floats = [];
+
+  for ( var i = 0; i < n; i++ ) {
+    floats.push( reader.readFloat() );
+  }
+
+  return floats;
+}
+
+class Texinfo {
+  constructor() {
+    // [s/t][xyz offset].
+    this.textureVecs = [];
+    // [s/t][xyz offset] - length is in units of texels/area.
+    this.lightmapVecs = [];
+    // Miptex flags and overrides.
+    this.flags = 0;
+    // Pointer to texture name, size, etc.
+    this.texdata = 0;
+  }
+
+  read( reader ) {
+    this.textureVecs = [ readFloats( reader, 4 ), readFloats( reader, 4 ) ];
+    this.lightmapVecs = [ readFloats( reader, 4 ), readFloats( reader, 4 ) ];
+    this.flags = reader.readInt32();
+    this.texdata = reader.readInt32();
+    return this;
+  }
+
+  static read( reader ) {
+    return new Texinfo().read( reader );
+  }
+}
+
 function readLumpData( reader, lump, read ) {
   var prevOffset = reader.offset;
   reader.offset = lump.fileofs;
@@ -345,6 +416,11 @@ export function parse( file ) {
     reader => reader.readInt32()
   );
   console.log( surfedges );
+
+  // Texinfos.
+  var texinfosLump = header.lumps[ LUMP.TEXINFO ];
+  var texinfos = readLumpData( reader, texinfosLump, Texinfo.read );
+  console.log( texinfos );
 
   // Faces.
   var facesLump = header.lumps[ LUMP.FACES ];
