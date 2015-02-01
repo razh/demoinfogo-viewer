@@ -31,17 +31,17 @@ function createBSPGeometry( bsp ) {
       edge = edges[ Math.abs( surfedge ) ];
 
       // Initial vertex.
+      // Reverse winding order if surfedge is negative.
       if ( !j ) {
         vi = surfedge >= 0 ? edge.v[0] : edge.v[1];
       } else {
+        // BSP uses a clockwise winding order. THREE is counter-clockwise.
         if ( surfedge >= 0 ) {
-          // Positive direction.
-          vj = edge.v[0];
-          vk = edge.v[1];
-        } else {
-          // Negative direction.
           vj = edge.v[1];
           vk = edge.v[0];
+        } else {
+          vj = edge.v[0];
+          vk = edge.v[1];
         }
 
         geometry.faces.push( new THREE.Face3( vi, vj, vk ) );
