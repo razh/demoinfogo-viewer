@@ -69,24 +69,49 @@ export function init( bsp ) {
   container.appendChild( renderer.domElement );
 
   scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2( '#000', 1e-5 );
 
-  camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1e6 );
-  camera.position.set( 0, 0, 8192 );
-  camera.lookAt( new THREE.Vector3() );
+  camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1e5 );
   scene.add( camera );
 
-  material = new THREE.MeshBasicMaterial({
+  material = new THREE.MeshPhongMaterial({
     color: 0xffffff,
-    wireframe: true
+    opacity: 0.8,
+    transparent: true,
+    shading: THREE.FlatShading
   });
 
   geometry = createBSPGeometry( bsp );
-  mesh = new THREE.Mesh( geometry, material );
+  geometry.computeBoundingSphere();
 
+  mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
+
+  var helper = new THREE.EdgesHelper( mesh, 0x000000 );
+  scene.add( helper );
+
+  var light = new THREE.DirectionalLight( '#fff' );
+  light.position.set( 2048, 0, 2048 );
+  scene.add( light );
+
+  scene.add( new THREE.AmbientLight( '#555' ) );
 }
 
 export function animate() {
+  var time = Date.now() * 1e-3;
+
+  var { center, radius } = geometry.boundingSphere;
+  var angle = 0.25 * time;
+
+  camera.position.set(
+    radius * Math.cos( angle ) + center.x,
+    radius * Math.sin( angle ) + center.y,
+    0.5 * radius
+  );
+
+  camera.lookAt( geometry.boundingSphere.center );
+  camera.up.set( 0, 0, 1 );
+
   renderer.render( scene, camera );
   requestAnimationFrame( animate );
 }
