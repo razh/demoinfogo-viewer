@@ -34,10 +34,6 @@ export default class BitBufferReader extends BufferReader {
     this.bitOffset = 0;
   }
 
-  peekBit() {
-    return this.buffer[ this.offset ] >> ( this.bitOffset & 7 ) & 1;
-  }
-
   go( bits ) {
     this.offset -= Math.floor( bits / 8 );
     this.bitOffset -= bits % 8;
@@ -49,6 +45,10 @@ export default class BitBufferReader extends BufferReader {
 
     this.offset = Math.max( this.offset, 0 );
     return this;
+  }
+
+  peekBit() {
+    return this.buffer[ this.offset ] >> ( this.bitOffset & 7 ) & 1;
   }
 
   readBit() {
@@ -105,6 +105,14 @@ export default class BitBufferReader extends BufferReader {
     }
 
     return new Buffer( buffer );
+  }
+
+  readInt8() {
+    if ( !this.bitOffset ) {
+      return super.readInt8();
+    }
+
+    return this.readBits( 8 );
   }
 
   readUInt8() {

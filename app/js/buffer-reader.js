@@ -35,6 +35,17 @@ export default class BufferReader {
   peekChar() { return this.peekUInt8(); }
   readChar() { return this.readUInt8(); }
 
+  // int8.
+  peekInt8() {
+    return this.buffer.readInt8( this.offset );
+  }
+
+  readInt8() {
+    var value = this.peekInt8();
+    this.offset++;
+    return value;
+  }
+
   // int16.
   peekInt16() {
     return this.buffer.readInt16LE( this.offset );

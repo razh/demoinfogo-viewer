@@ -9,7 +9,6 @@ const HEADER_LUMPS = 64;
 const MAXLIGHTMAPS = 4;
 
 // Lump types.
-// NOTE: This list is incomplete.
 const LUMP = {
   // Map entities.
   ENTITIES: 0,
@@ -63,7 +62,71 @@ const LUMP = {
   // Displacement surface array.
   DISPINFO: 26,
   // Brush faces array before splitting.
-  ORIGINALFACES: 27
+  ORIGINALFACES: 27,
+  // Displacement physics collision data.
+  PHYSDISP: 28,
+  // Physics collision data.
+  PHYSCOLLIDE: 29,
+  // Face plane normals.
+  VERTNORMALS: 30,
+  // Face plane normal index array.
+  VERTNORMALINDICES: 31,
+  // Displacement lightmap alphas.
+  DISP_LIGHTMAP_ALPHAS: 32,
+  // Vertices of displacement surface meshes.
+  DISP_VERTS: 33,
+  // Displacement lightmap sample positions.
+  DISP_LIGHTMAP_SAMPLE_POSITIONS: 34,
+  // Game-specific data lump.
+  GAME_LUMP: 35,
+  // Data for leaf nodes that are inside water.
+  LEAFWATERDATA: 36,
+  // Water polygon data.
+  PRIMITIVES: 37,
+  // Water polygon vertices.
+  PRIMVERTS: 38,
+  // Water polygon vertex index array.
+  PRIMINDICES: 39,
+  // Embedded uncompressed zip-format file.
+  PAKFILE: 40,
+  // Clipped portal polygon vertices.
+  CLIPPORTALVERTS: 41,
+  // env_cubemap location array.
+  CUBEMAPS: 42,
+  // Texture name data.
+  TEXDATA_STRING_DATA: 43,
+  // Index array into texdata string data.
+  TEXDATA_STRING_TABLE: 44,
+  // info_overlay data array.
+  OVERLAYS: 45,
+  // Distance from leaves to water.
+  LEAFMINDISTTOWATER: 46,
+  // Macro texture info for faces.
+  FACE_MACRO_TEXTURE_INFO: 47,
+  // Displacement surface triangles.
+  DISP_TRIS: 48,
+  // Compressed win32-specific Havok terrain surface collision data.
+  PHYSCOLLIDESURFACE: 49,
+  WATEROVERLAYS: 50,
+  // Index of LUMP_LEAF_AMBIENT_LIGHTING_HDR.
+  LEAF_AMBIENT_INDEX_HDR: 51,
+  // Index of LUMP_LEAF_AMBIENT_LIGHTING.
+  LEAF_AMBIENT_INDEX: 52,
+  // HDR lightmap samples.
+  LIGHTING_HDR: 53,
+  // Internal HDR world lights converted from the entity lump.
+  WORLDLIGHTS_HDR: 54,
+  // Overrides part of the data stored in LUMP_LEAFS.
+  LEAF_AMBIENT_LIGHTING_HDR: 55,
+  LEAF_AMBIENT_LIGHTING: 56,
+  // xzip version of pak file for Xbox.
+  XZIPPAKFILE: 57,
+  // HDR maps may have different face data.
+  FACES_HDR: 58,
+  // Extended level-wide flags. Not present in all levels.
+  MAP_FLAGS: 59,
+  // Fade distances for overlays.
+  OVERLAY_FADES: 60
 };
 
 class Lump {
@@ -143,7 +206,7 @@ class Vector {
 class Plane {
   constructor() {
     // Normal vector.
-    this.normal = null;
+    this.normal = new Vector();
     // Distance from origin.
     this.dist = 0;
     // Plane axis identifier.
@@ -151,7 +214,7 @@ class Plane {
   }
 
   read( reader ) {
-    this.normal = Vector.read( reader );
+    this.normal.read( reader );
     this.dist = reader.readFloat();
     this.type = reader.readInt32();
     return this;
@@ -372,6 +435,29 @@ class Texinfo {
   }
 }
 
+// Compressed color format.
+class ColorRGBExp32 {
+  constructor() {
+    this.r = 0;
+    this.g = 0;
+    this.b = 0;
+    this.exponent = 0;
+  }
+
+  read( reader ) {
+    this.r = reader.readByte();
+    this.g = reader.readByte();
+    this.b = reader.readByte();
+    // signed char.
+    this.exponent = reader.readInt8();
+    return this;
+  }
+
+  static read( reader ) {
+    return new ColorRGBExp32().read( reader );
+  }
+}
+
 function readLumpData( reader, lump, read ) {
   var prevOffset = reader.offset;
   reader.offset = lump.fileofs;
@@ -436,4 +522,14 @@ export function parse( file ) {
   var brushsidesLump = header.lumps[ LUMP.BRUSHSIDES ];
   var brushsides = readLumpData( reader, brushsidesLump, Brushside.read );
   console.log( brushsides );
+
+  // Lighting.
+  var lightingLump = header.lumps[ LUMP.LIGHTING ];
+  var lighting = readLumpData( reader, lightingLump, ColorRGBExp32.read );
+  console.log( lighting );
+
+  // HDR Lighting.
+  var lightingHDRLump = header.lumps[ LUMP.LIGHTING_HDR ];
+  var lightingHDR = readLumpData( reader, lightingHDRLump, ColorRGBExp32.read );
+  console.log( lightingHDR );
 }
