@@ -458,6 +458,170 @@ class ColorRGBExp32 {
   }
 }
 
+// Displacement maps.
+const ALLOWEDVERTS_SIZE = 10;
+// Maximum number of neighboring displacements touching a displacement's corner.
+const MAX_DISP_CORNERS_NEIGHBORS = 4;
+
+// These denote where one dispinfo fits on another.
+const NeighborSpan = {
+  CORNER_TO_CORNER: 0,
+  CORNER_TO_MIDPOINT: 1,
+  MIDPOINT_TO_CORNER: 2
+};
+
+// These define relative orientations of displacement neighbors.
+const NeighborOrientation = {
+  ORIENTATION_CCW_0: 0,
+  ORIENTATION_CCW_90: 1,
+  ORIENTATION_CCW_180: 2,
+  ORIENTATION_CCW_270: 3
+};
+
+class DispSubNeighbor {
+  constructor() {
+    // Indexes into ddispinfos. 0xFFFF if there is no neighbor here.
+    this.neighbor = 0;
+    // CCW rotation of the neighbor w/r/t this displacement.
+    this.neighborOrientation = 0;
+    // These use the NeighborSpan type.
+    // Where the neighbor fits onto this side of our displacement.
+    this.span = 0;
+    // Where we fit onto our neighbor.
+    this.neighborSpan = 0;
+  }
+
+  read( reader ) {
+    this.neighbor = reader.readUInt16();
+    this.neighborOrientation = reader.readUInt8();
+    this.span = reader.readUInt8();
+    this.neighborSpan = reader.readUInt8();
+    return this;
+  }
+
+  static read( reader ) {
+    return new DispSubNeighbor().read( reader );
+  }
+}
+
+class DispNeighbor {
+  constructor() {
+    // Note: If there is a neighbor that fills the whole side
+    // (CORNER_TO_CORNER), then it will always be in DispNeighbor.neighbors[0].
+    this.subNeighbors = [];
+  }
+
+  read( reader ) {
+    this.subNeighbors = [
+      DispSubNeighbor.read( reader ),
+      DispSubNeighbor.read( reader )
+    ];
+    return this;
+  }
+
+  static read( reader ) {
+    return new DispNeighbor().read( reader );
+  }
+}
+
+class DispCornerNeighbors {
+  constructor() {
+    // Indices of neighbors.
+    this.neighbors = [];
+    this.nNeighbors = 0;
+  }
+
+  read( reader ) {
+    this.neighbors = [];
+    for ( var i = 0; i < MAX_DISP_CORNERS_NEIGHBORS; i++ ) {
+      this.neighbors.push( reader.readUInt16() );
+    }
+
+    this.nNeighbors = reader.readUInt8();
+    return this;
+  }
+
+  static read( reader ) {
+    return new DispCornerNeighbors().read( reader );
+  }
+}
+
+class Dispinfo {
+  constructor() {
+    // Start position used for orientation.
+    this.startPosition = new Vector();
+    // Index into LUMP_DISP_VERTS.
+    this.dispVertStart = 0;
+    // Index into LUMP_DISP_TRIS.
+    this.dispTriStart = 0;
+    // Power - indicates size of map/surface (2^power + 1).
+    this.power = 0;
+    // Minimum tessellation allowed.
+    this.minTess = 0;
+    // Lighting smoothing angle.
+    this.smoothingAngle = 0;
+    // Surface contents.
+    this.contents = 0;
+    // Which map face this displacement comes from.
+    this.mapFace = 0;
+    // Index into ddisplightmapalpha.
+    this.lightmapAlphaStart = 0;
+    // Index into LUMP_DISP_LIGHTMAP_SAMPLE_POSITIONS.
+    this.lightmapSamplePositionStart = 0;
+    // Indexed by NEIGHBOREDGE_ defines.
+    this.edgeNeighbors = [];
+    // Indexed by CORNER_ defines.
+    this.cornerNeighbors = [];
+    // Active vertices.
+    // This is built based on the layout and sizes of our neighbors and tells
+    // us which vertices are allowed to be active.
+    this.allowedVerts = [];
+  }
+
+  read( reader ) {
+    var start = reader.offset;
+
+    this.startPosition.read( reader );
+    this.dispVertStart = reader.readInt32();
+    this.dispTriStart = reader.readInt32();
+    this.power = reader.readInt32();
+    this.minTess = reader.readInt32();
+    this.smoothingAngle = reader.readFloat();
+    this.contents = reader.readInt32();
+    this.mapFace = reader.readUInt16();
+    this.lightmapAlphaStart = reader.readInt32();
+    this.lightmapSamplePositionStart = reader.readInt32();
+
+    var i;
+
+    this.edgeNeighbors = [];
+    for ( i = 0; i < 4; i++ ) {
+      this.edgeNeighbors.push( DispNeighbor.read( reader ) );
+    }
+
+    this.cornerNeighbors = [];
+    for ( i = 0; i < 4; i++ ) {
+      this.cornerNeighbors.push( DispCornerNeighbors.read( reader ) );
+    }
+
+    this.allowedVerts = [];
+    for ( i = 0; i < ALLOWEDVERTS_SIZE; i++ ) {
+      this.allowedVerts.push( reader.readUInt32() );
+    }
+
+    // Align dispinfo reads to struct size (176 bytes).
+    reader.offset = start + Dispinfo.size;
+    return this;
+  }
+
+  static read( reader ) {
+    return new Dispinfo().read( reader );
+  }
+}
+
+Dispinfo.size = 176;
+
+
 function readLumpData( reader, lump, read ) {
   var prevOffset = reader.offset;
   reader.offset = lump.fileofs;
@@ -532,4 +696,9 @@ export function parse( file ) {
   var lightingHDRLump = header.lumps[ LUMP.LIGHTING_HDR ];
   var lightingHDR = readLumpData( reader, lightingHDRLump, ColorRGBExp32.read );
   console.log( lightingHDR );
+
+  // Dispinfos.
+  var dispinfosLump = header.lumps[ LUMP.DISPINFO ];
+  var dispinfos = readLumpData( reader, dispinfosLump, Dispinfo.read );
+  console.log( dispinfos );
 }
