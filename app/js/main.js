@@ -52,7 +52,7 @@ document.addEventListener( 'drop', event => {
         reader.readAsArrayBuffer( file );
       });
     })
-  ).then( events => events.map( event => parse( event.srcElement.result ) ) );
+  ).then( events => events.map( event => parse( event.target.result ) ) );
 });
 
 document.addEventListener( 'dragover', event => {
