@@ -621,6 +621,53 @@ class Dispinfo {
 
 Dispinfo.size = 176;
 
+class DispVert {
+  constructor() {
+    // Vector field defining displacement volume.
+    this.vector = new Vector();
+    // Displacement distances.
+    this.dist = 0;
+    // "Per vertex" alpha values.
+    this.alpha = 0;
+  }
+
+  read( reader ) {
+    this.vector.read( reader );
+    this.dist = reader.readFloat();
+    this.alpha = reader.readFloat();
+    return this;
+  }
+
+  static read( reader ) {
+    return new DispVert().read( reader );
+  }
+}
+
+const DISPTRI = {
+  TAG_SURFACE: ( 1 << 0 ),
+  TAG_WALKABLE: ( 1 << 1 ),
+  TAG_BUILDABLE: ( 1 << 2 ),
+  FLAG_SURFPROP1: ( 1 << 3 ),
+  FLAG_SURFPROP2: ( 1 << 4 ),
+  TAG_REMOVE: ( 1 << 5 )
+};
+
+class DispTri {
+  constructor() {
+    // Displacement triangle tags.
+    this.tags = 0;
+  }
+
+  read( reader ) {
+    this.tags = reader.readUInt16();
+    return this;
+  }
+
+  static read( reader ) {
+    return new DispTri().read( reader );
+  }
+}
+
 
 function readLumpData( reader, lump, read ) {
   var prevOffset = reader.offset;
@@ -701,4 +748,14 @@ export function parse( file ) {
   var dispinfosLump = header.lumps[ LUMP.DISPINFO ];
   var dispinfos = readLumpData( reader, dispinfosLump, Dispinfo.read );
   console.log( dispinfos );
+
+  // DispVerts.
+  var dispVertsLump = header.lumps[ LUMP.DISP_VERTS ];
+  var dispVerts = readLumpData( reader, dispVertsLump, DispVert.read );
+  console.log( dispVerts );
+
+  // DispTris.
+  var dispTrisLump = header.lumps[ LUMP.DISP_TRIS ];
+  var dispTris = readLumpData( reader, dispTrisLump, DispTri.read );
+  console.log( dispTris );
 }
