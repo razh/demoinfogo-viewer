@@ -95,6 +95,14 @@ export function init( bsp ) {
   scene.add( light );
 
   scene.add( new THREE.AmbientLight( '#555' ) );
+
+  // Handle resize events.
+  window.addEventListener( 'resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  });
 }
 
 export function animate() {
