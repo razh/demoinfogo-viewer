@@ -724,6 +724,23 @@ export function parse( file ) {
   var faces = readLumpData( reader, facesLump, Face.read );
   console.log( faces );
 
+  faces = _.filter( faces, face => {
+    var texinfo = texinfos[ face.texinfo ];
+    if ( !texinfo ) {
+      return;
+    }
+
+    return !( texinfo.flags & (
+      SURF.LIGHT |
+      SURF.SKY2D |
+      SURF.SKY |
+      SURF.NODRAW |
+      SURF.HINT |
+      SURF.SKIP |
+      SURF.NOLIGHT
+    ));
+  });
+
   // Brushes.
   var brushesLump = header.lumps[ LUMP.BRUSHES ];
   var brushes = readLumpData( reader, brushesLump, Brush.read );
