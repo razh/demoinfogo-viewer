@@ -55,6 +55,78 @@ function createBSPGeometry( bsp ) {
   return geometry;
 }
 
+function createDisplacementGeometry( bsp ) {
+  var {
+    vertexes,
+    surfedges,
+    edges,
+    faces,
+    dispinfos,
+    dispVerts
+  } = bsp;
+
+  function startVertex( face ) {
+    var surfedge = surfedges[ face ];
+    var edge = edges[ Math.abs( surfedge ) ];
+    return vertexes[ surfedge >= 0 ? edge.v[0] : edge.v[1] ];
+  }
+
+  var disps = [];
+
+  var face;
+  var dispinfo;
+  var disp;
+  var vector = new THREE.Vector3();
+  var temp = new THREE.Vector3();
+  var size;
+  var vertexCount;
+  var vertex;
+  var v0;
+  // Edge deltas.
+  var du = new THREE.Vector3();
+  var dv = new THREE.Vector3();
+  var i, il;
+  var j;
+  // Parameters along face.
+  var ut, vt;
+  for ( i = 0, il = faces.length; i < il; i++ ) {
+    face = faces[i];
+    dispinfo = dispinfos[ face.dispinfo ];
+    disp = new THREE.Geometry();
+
+    v0 = startVertex( face.firstedge );
+    du.copy( startVertex( face.firstedge + 1 ) ).sub( v0 );
+    dv.copy( startVertex( face.firstedge + 3 ) ).sub( v0 );
+
+    /**
+     *   1       2
+     *    0-----o
+     *    |     |
+     *    |     |
+     *    o-----o
+     *   0       3
+     */
+    size = Math.pow( 2, dispinfo.power ) + 1;
+    vertexCount = size * size;
+    for ( j = 0; j < vertexCount; j++ ) {
+      vertex = dispVerts[ dispinfo.dispVertStart + j ];
+
+      ut = ( j % size ) / ( size - 1 );
+      vt = Math.floor( j / size ) / ( size - 1 );
+
+      vector.copy( v0 )
+        .add( temp.copy( du ).multiplyScalar( ut ) )
+        .add( temp.copy( dv ).multiplyScalar( vt ) );
+
+      disp.vertices.push( vector.clone() );
+    }
+
+    disps.push( disp );
+  }
+
+  return disps;
+}
+
 var container;
 var scene, camera, renderer;
 var mesh, geometry, material;
