@@ -55,7 +55,7 @@ function createBSPGeometry( bsp ) {
   return geometry;
 }
 
-function createDisplacementGeometry( bsp ) {
+export function createDisplacementGeometry( bsp ) {
   var {
     vertexes,
     surfedges,
@@ -75,22 +75,23 @@ function createDisplacementGeometry( bsp ) {
 
   var face;
   var dispinfo;
+  var dispVert;
   var disp;
-  var vector = new THREE.Vector3();
-  var temp = new THREE.Vector3();
+  var v0;
   var size;
   var vertexCount;
-  var vertex;
-  var v0;
   // Edge deltas.
   var du = new THREE.Vector3();
   var dv = new THREE.Vector3();
-  var i, il;
-  var j;
+  // Temporary vectors.
+  var vector = new THREE.Vector3();
+  var temp = new THREE.Vector3();
+  var f, fl;
+  var i, j;
   // Parameters along face.
   var ut, vt;
-  for ( i = 0, il = faces.length; i < il; i++ ) {
-    face = faces[i];
+  for ( f = 0, fl = faces.length; f < fl; f++ ) {
+    face = faces[f];
     dispinfo = dispinfos[ face.dispinfo ];
     disp = new THREE.Geometry();
 
@@ -108,17 +109,32 @@ function createDisplacementGeometry( bsp ) {
      */
     size = Math.pow( 2, dispinfo.power ) + 1;
     vertexCount = size * size;
-    for ( j = 0; j < vertexCount; j++ ) {
-      vertex = dispVerts[ dispinfo.dispVertStart + j ];
+    for ( i = 0; i < vertexCount; i++ ) {
+      dispVert = dispVerts[ dispinfo.dispVertStart + i ];
 
-      ut = ( j % size ) / ( size - 1 );
-      vt = Math.floor( j / size ) / ( size - 1 );
+      ut = ( i % size ) / ( size - 1 );
+      vt = Math.floor( i / size ) / ( size - 1 );
 
       vector.copy( v0 )
         .add( temp.copy( du ).multiplyScalar( ut ) )
-        .add( temp.copy( dv ).multiplyScalar( vt ) );
+        .add( temp.copy( dv ).multiplyScalar( vt ) )
+        .add( temp.copy( dispVert.vector ).multiplyScalar( dispVert.dist ) );
 
       disp.vertices.push( vector.clone() );
+    }
+
+    // Faces.
+    var a, b, c, d;
+    for ( i = 0; i < size - 1; i++ ) {
+      for ( j = 0; j < size - 1; j++ ) {
+        a = j + size * i;
+        b = j + size * ( i + 1 );
+        c = ( j + 1 ) + size * ( i + 1 );
+        d = ( j + 1 ) + size * i;
+
+        disp.faces.push( new THREE.Face3( a, b, d ) );
+        disp.faces.push( new THREE.Face3( b, c, d ) );
+      }
     }
 
     disps.push( disp );
