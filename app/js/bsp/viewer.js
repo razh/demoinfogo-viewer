@@ -143,9 +143,12 @@ export function createDisplacementGeometry( bsp ) {
   return disps;
 }
 
+
 var container;
 var scene, camera, renderer;
 var mesh, geometry, material;
+
+var scale = 1;
 
 export function init( bsp ) {
   container = document.createElement( 'div' );
@@ -179,7 +182,8 @@ export function init( bsp ) {
   scene.add( helper );
 
   var light = new THREE.DirectionalLight( '#fff' );
-  light.position.set( 2048, 0, 2048 );
+  light.position.copy( geometry.boundingSphere.center );
+  light.position.z += geometry.boundingSphere.radius;
   scene.add( light );
 
   scene.add( new THREE.AmbientLight( '#555' ) );
@@ -191,6 +195,17 @@ export function init( bsp ) {
 
     renderer.setSize( window.innerWidth, window.innerHeight );
   });
+
+  container.addEventListener( 'wheel', event => {
+    event.preventDefault();
+
+    var speed = 0.98;
+    if ( event.deltaY > 0 ) {
+      scale /= speed;
+    } else {
+      scale *= speed;
+    }
+  });
 }
 
 export function animate() {
@@ -200,9 +215,9 @@ export function animate() {
   var angle = 0.25 * time;
 
   camera.position.set(
-    radius * Math.cos( angle ) + center.x,
-    radius * Math.sin( angle ) + center.y,
-    0.5 * radius
+    scale * radius * Math.cos( angle ) + center.x,
+    scale * radius * Math.sin( angle ) + center.y,
+    0.5 * scale * radius
   );
 
   camera.lookAt( geometry.boundingSphere.center );
