@@ -55,7 +55,7 @@ function createBSPGeometry( bsp ) {
   return geometry;
 }
 
-export function createDisplacementGeometry( bsp ) {
+function createDisplacementGeometries( bsp ) {
   var {
     vertexes,
     surfedges,
@@ -92,12 +92,12 @@ export function createDisplacementGeometry( bsp ) {
   var ut, vt;
   for ( f = 0, fl = faces.length; f < fl; f++ ) {
     face = faces[f];
+    if ( face.dispinfo < 0 ) {
+      continue;
+    }
+
     dispinfo = dispinfos[ face.dispinfo ];
     disp = new THREE.Geometry();
-
-    v0 = startVertex( face.firstedge );
-    du.copy( startVertex( face.firstedge + 1 ) ).sub( v0 );
-    dv.copy( startVertex( face.firstedge + 3 ) ).sub( v0 );
 
     /**
      *   1       2
@@ -107,7 +107,11 @@ export function createDisplacementGeometry( bsp ) {
      *    o-----o
      *   0       3
      */
-    size = Math.pow( 2, dispinfo.power ) + 1;
+    v0 = startVertex( face.firstedge );
+    du.copy( startVertex( face.firstedge + 1 ) ).sub( v0 );
+    dv.copy( startVertex( face.firstedge + 3 ) ).sub( v0 );
+
+    size = ( 1 << dispinfo.power ) + 1;
     vertexCount = size * size;
     for ( i = 0; i < vertexCount; i++ ) {
       dispVert = dispVerts[ dispinfo.dispVertStart + i ];
@@ -180,6 +184,24 @@ export function init( bsp ) {
 
   var helper = new THREE.EdgesHelper( mesh, 0x000000 );
   scene.add( helper );
+
+  // Displacements.
+  var dispMaterial = new THREE.MeshPhongMaterial({
+    color: 0xbbbbbb,
+    ambient: 0xff3333,
+    opacity: 0.8,
+    transparent: true,
+    shading: THREE.FlatShading
+  });
+
+  createDisplacementGeometries( bsp ).map( geometry => {
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+
+    var mesh = new THREE.Mesh( geometry, dispMaterial );
+    scene.add( mesh );
+    return mesh;
+  });
 
   var light = new THREE.DirectionalLight( '#fff' );
   light.position.copy( geometry.boundingSphere.center );
