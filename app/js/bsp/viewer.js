@@ -147,6 +147,9 @@ function createDisplacementGeometries( bsp ) {
   return disps;
 }
 
+var options = {
+  displacements: false
+};
 
 var container;
 var scene, camera, renderer;
@@ -186,22 +189,24 @@ export function init( bsp ) {
   scene.add( helper );
 
   // Displacements.
-  var dispMaterial = new THREE.MeshPhongMaterial({
-    color: 0xbbbbbb,
-    ambient: 0xff3333,
-    opacity: 0.8,
-    transparent: true,
-    shading: THREE.FlatShading
-  });
+if ( options.displacements ) {
+   var dispMaterial = new THREE.MeshPhongMaterial({
+      color: 0xbbbbbb,
+      ambient: 0xff3333,
+      opacity: 0.8,
+      transparent: true,
+      shading: THREE.FlatShading
+    });
 
-  createDisplacementGeometries( bsp ).map( geometry => {
-    geometry.computeFaceNormals();
-    geometry.computeVertexNormals();
+    createDisplacementGeometries( bsp ).map( geometry => {
+      geometry.computeFaceNormals();
+      geometry.computeVertexNormals();
 
-    var mesh = new THREE.Mesh( geometry, dispMaterial );
-    scene.add( mesh );
-    return mesh;
-  });
+      var mesh = new THREE.Mesh( geometry, dispMaterial );
+      scene.add( mesh );
+      return mesh;
+    });
+  }
 
   var light = new THREE.DirectionalLight( '#fff' );
   light.position.copy( geometry.boundingSphere.center );
