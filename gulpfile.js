@@ -3,6 +3,7 @@
 var PORT = process.env.PORT || 3000;
 
 var _ = require('lodash');
+var babelify = require('babelify');
 var brfs = require('brfs');
 var browserify = require('browserify');
 var browserifyShim = require('browserify-shim');
@@ -11,7 +12,6 @@ var del = require('del');
 var mainBowerFiles = require('main-bower-files');
 var runSequence = require('run-sequence');
 var source = require('vinyl-source-stream');
-var to5ify = require('6to5ify');
 var watchify = require('watchify');
 
 var gulp = require('gulp');
@@ -40,7 +40,7 @@ gulp.task('js', function() {
     }, watchify.args)));
 
   bundler
-    .transform(to5ify)
+    .transform(babelify)
     .transform(brfs)
     .transform(browserifyShim);
 
