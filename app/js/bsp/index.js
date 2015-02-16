@@ -689,26 +689,26 @@ function readLumpData( reader, lump, read ) {
 }
 
 var options = {
-  debug: false
+  debug: false,
+  vmf: false,
+  lighting: false,
+  displacements: false
 };
 
 export function parse( file ) {
   var buffer = new Buffer( new Uint8Array( file ) );
   var reader = new BufferReader( buffer );
 
-  var header = Header.read( reader );
-  console.log( header );
+  var bsp = {};
 
-  // Planes.
-  var planesLump = header.lumps[ LUMP.PLANES ];
-  var planes = readLumpData( reader, planesLump, Plane.read );
-  if ( options.debug ) {
-    console.log( planes );
-  }
+  var header = Header.read( reader );
+  bsp.header = header;
+  console.log( header );
 
   // Vertexes.
   var vertexesLump = header.lumps[ LUMP.VERTEXES ];
   var vertexes = readLumpData( reader, vertexesLump, Vector.read );
+  bsp.vertexes = vertexes;
   if ( options.debug ) {
     console.log( vertexes );
   }
@@ -716,6 +716,7 @@ export function parse( file ) {
   // Edges.
   var edgesLump = header.lumps[ LUMP.EDGES ];
   var edges = readLumpData( reader, edgesLump, Edge.read );
+  bsp.edges = edges;
   if ( options.debug ) {
     console.log( edges );
   }
@@ -728,6 +729,7 @@ export function parse( file ) {
     surfedgesLump,
     reader => reader.readInt32()
   );
+  bsp.surfedges = surfedges;
   if ( options.debug ) {
     console.log( surfedges );
   }
@@ -735,6 +737,7 @@ export function parse( file ) {
   // Texinfos.
   var texinfosLump = header.lumps[ LUMP.TEXINFO ];
   var texinfos = readLumpData( reader, texinfosLump, Texinfo.read );
+  bsp.texinfos = texinfos;
   if ( options.debug ) {
     console.log( texinfos );
   }
@@ -747,7 +750,7 @@ export function parse( file ) {
   }
 
   // Filter non-visible faces.
-  faces = _.filter( faces, face => {
+  bsp.faces = _.filter( faces, face => {
     var texinfo = texinfos[ face.texinfo ];
     if ( !texinfo ) {
       return;
@@ -764,68 +767,55 @@ export function parse( file ) {
     ));
   });
 
-  // Brushes.
-  var brushesLump = header.lumps[ LUMP.BRUSHES ];
-  var brushes = readLumpData( reader, brushesLump, Brush.read );
-  if ( options.debug ) {
-    console.log( brushes );
+  // Original .vmf geometry.
+  if ( options.vmf ) {
+    // Planes.
+    var planesLump = header.lumps[ LUMP.PLANES ];
+    var planes = readLumpData( reader, planesLump, Plane.read );
+    bsp.planes = planes;
+    if ( options.debug ) {
+      console.log( planes );
+    }
+
+    // Brushes.
+    var brushesLump = header.lumps[ LUMP.BRUSHES ];
+    var brushes = readLumpData( reader, brushesLump, Brush.read );
+    bsp.brushes = brushes;
+    if ( options.debug ) {
+      console.log( brushes );
+    }
+
+    // Brushsides.
+    var brushsidesLump = header.lumps[ LUMP.BRUSHSIDES ];
+    var brushsides = readLumpData( reader, brushsidesLump, Brushside.read );
+    bsp.brushsides = brushsides;
+    if ( options.debug ) {
+      console.log( brushsides );
+    }
   }
 
-  // Brushsides.
-  var brushsidesLump = header.lumps[ LUMP.BRUSHSIDES ];
-  var brushsides = readLumpData( reader, brushsidesLump, Brushside.read );
-  if ( options.debug ) {
-    console.log( brushsides );
+  // Lighting calculated by vrad.
+  if ( options.lighting ) {
+    // Lighting.
+    var lightingLump = header.lumps[ LUMP.LIGHTING ];
+    var lighting = readLumpData( reader, lightingLump, ColorRGBExp32.read );
+    bsp.lighting = lighting;
+    if ( options.debug ) {
+      console.log( lighting );
+    }
+
+    // HDR Lighting.
+    var lightingHDRLump = header.lumps[ LUMP.LIGHTING_HDR ];
+    var lightingHDR = readLumpData(
+      reader,
+      lightingHDRLump,
+      ColorRGBExp32.read
+    );
+    bsp.lightingHDR = lightingHDR;
+    if ( options.debug ) {
+      console.log( lightingHDR );
+    }
   }
-
-  // Lighting.
-  var lightingLump = header.lumps[ LUMP.LIGHTING ];
-  var lighting = readLumpData( reader, lightingLump, ColorRGBExp32.read );
-  if ( options.debug ) {
-    console.log( lighting );
-  }
-
-  // HDR Lighting.
-  var lightingHDRLump = header.lumps[ LUMP.LIGHTING_HDR ];
-  var lightingHDR = readLumpData( reader, lightingHDRLump, ColorRGBExp32.read );
-  if ( options.debug ) {
-    console.log( lightingHDR );
-  }
-
-  // Dispinfos.
-  var dispinfosLump = header.lumps[ LUMP.DISPINFO ];
-  var dispinfos = readLumpData( reader, dispinfosLump, Dispinfo.read );
-  if ( options.debug ) {
-    console.log( dispinfos );
-  }
-
-  // DispVerts.
-  var dispVertsLump = header.lumps[ LUMP.DISP_VERTS ];
-  var dispVerts = readLumpData( reader, dispVertsLump, DispVert.read );
-  if ( options.debug ) {
-    console.log( dispVerts );
-  }
-
-  // DispTris.
-  var dispTrisLump = header.lumps[ LUMP.DISP_TRIS ];
-  var dispTris = readLumpData( reader, dispTrisLump, DispTri.read );
-  if ( options.debug ) {
-    console.log( dispTris );
-  }
-
-
-  // Render.
-  init({
-    vertexes,
-    edges,
-    surfedges,
-    faces,
-    dispinfos,
-    dispVerts
-  });
-
-  animate();
-
 
   // Print faces.
   function faceToString( face ) {
@@ -841,18 +831,49 @@ export function parse( file ) {
       }).join( ', ' );
   }
 
-  // Print displacement faces.
-  console.log(
-    _( faces )
-      .filter( face => face.dispinfo >= 0 )
-      .map( face => {
-        if ( face.numedges !== 4 ) {
-          console.warning( face );
-        }
+  // Displacements.
+  if ( options.displacements ) {
+    // Dispinfos.
+    var dispinfosLump = header.lumps[ LUMP.DISPINFO ];
+    var dispinfos = readLumpData( reader, dispinfosLump, Dispinfo.read );
+    bsp.dispinfos = dispinfos;
+    if ( options.debug ) {
+      console.log( dispinfos );
+    }
 
-        return faceToString( face );
-      })
-      .take( 10 )
-      .join( '\n' )
-  );
+    // DispVerts.
+    var dispVertsLump = header.lumps[ LUMP.DISP_VERTS ];
+    var dispVerts = readLumpData( reader, dispVertsLump, DispVert.read );
+    bsp.dispVerts = dispVerts;
+    if ( options.debug ) {
+      console.log( dispVerts );
+    }
+
+    // DispTris.
+    var dispTrisLump = header.lumps[ LUMP.DISP_TRIS ];
+    var dispTris = readLumpData( reader, dispTrisLump, DispTri.read );
+    bsp.dispTris = dispTris;
+    if ( options.debug ) {
+      console.log( dispTris );
+    }
+
+    // Print displacement faces.
+    console.log(
+      _( faces )
+        .filter( face => face.dispinfo >= 0 )
+        .map( face => {
+          if ( face.numedges !== 4 ) {
+            console.warning( face );
+          }
+
+          return faceToString( face );
+        })
+        .take( 10 )
+        .join( '\n' )
+    );
+  }
+
+  // Render.
+  init( bsp );
+  animate();
 }
