@@ -2,6 +2,9 @@
 
 var PORT = process.env.PORT || 3000;
 
+var SOURCE_DIR = './app';
+var BUILD_DIR = 'dist';
+
 var _ = require('lodash');
 var babelify = require('babelify');
 var brfs = require('brfs');
@@ -18,7 +21,7 @@ var gulp = require('gulp');
 var util = require('gulp-util');
 
 function onError(error) {
-  util.log('Error: ' + error.message);
+  util.log(error.message);
   /*jshint validthis:true*/
   this.emit('end');
 }
@@ -28,13 +31,13 @@ gulp.task('browser-sync', function() {
     browser: [],
     port: PORT,
     server: {
-      baseDir: './dist'
+      baseDir: './' + BUILD_DIR
     }
   });
 });
 
 gulp.task('js', function() {
-  var bundler = watchify(browserify('./app/js/main.js',
+  var bundler = watchify(browserify(SOURCE_DIR + '/js/main.js',
     _.assign({
       debug: true,
     }, watchify.args)));
@@ -48,7 +51,7 @@ gulp.task('js', function() {
     return bundler.bundle()
       .on('error', onError)
       .pipe(source('bundle.js'))
-      .pipe(gulp.dest('dist'))
+      .pipe(gulp.dest(BUILD_DIR))
       .pipe(browserSync.reload({stream: true, once: true}));
   }
 
@@ -60,16 +63,16 @@ gulp.task('js', function() {
 });
 
 gulp.task('html', function() {
-  return gulp.src('./app/index.html')
-    .pipe(gulp.dest('dist'));
+  return gulp.src(SOURCE_DIR + '/index.html')
+    .pipe(gulp.dest(BUILD_DIR));
 });
 
 gulp.task('bower', function() {
   return gulp.src(mainBowerFiles())
-    .pipe(gulp.dest('dist'));
+    .pipe(gulp.dest(BUILD_DIR));
 });
 
-gulp.task('clean', del.bind(null, ['dist']));
+gulp.task('clean', del.bind(null, [BUILD_DIR]));
 
 gulp.task('default', ['clean'], function(cb) {
   return runSequence(
