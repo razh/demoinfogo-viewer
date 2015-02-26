@@ -23,6 +23,7 @@ export class QAngle extends Vector {
   }
 }
 
+
 export const FDEMO_NORMAL = 0;
 export const FDEMO_USE_ORIGIN2 = ( 1 << 0 );
 export const FDEMO_USE_ANGLES2 = ( 1 << 1 );
@@ -57,6 +58,7 @@ export class Split {
   }
 }
 
+
 export const MAX_SPLITSCREEN_CLIENTS = 2;
 
 export class DemoCommandInfo {
@@ -77,6 +79,7 @@ export class DemoCommandInfo {
     return new DemoCommandInfo().read( reader );
   }
 }
+
 
 export class EntityEntry {
   constructor( entity, classIndex, serialNum ) {
@@ -105,37 +108,3 @@ export class EntityEntry {
     }
   }
 }
-
-export const UpdateType = {
-  // Entity came back into PVS, create new entity if one doesn't exist.
-  EnterPVS: 0,
-  // Entity left PVS.
-  LeavePVS: 1,
-  // There is a delta for this entity.
-  DeltaEnt: 2,
-  // Entity stays alive but no delta ( could be LOD, or just unchanged ).
-  PreserveEnt: 3,
-  // Finished parsing entities successfully.
-  Finished: 4,
-  // Parsing error occured while reading entities.
-  Failed: 5,
-};
-
-// Flags for delta encoding header.
-export const HeaderFlags = {
-  FHDR_ZERO: 0,
-  FHDR_LEAVEPVS: 1,
-  FHDR_DELETE: 2,
-  FHDR_ENTERPVS: 4
-};
-
-export const GameEventValue = {
-  TYPE_STRING: 1,
-  TYPE_FLOAT: 2,
-  TYPE_LONG: 3,
-  TYPE_SHORT: 4,
-  TYPE_BYTE: 5,
-  TYPE_BOOL: 6,
-  TYPE_UINT64: 7,
-  TYPE_WSTRING: 8
-};

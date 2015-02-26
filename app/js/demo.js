@@ -5,18 +5,31 @@ import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 
 import {
-  DemoCommandInfo,
-  EntityEntry,
+  MAX_OSPATH,
+  MAX_EDICTS,
+  MAX_USERDATA_BITS,
+  MAX_USERDATA_SIZE,
+  SUBSTRING_BITS,
+  NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS,
+  MAX_PLAYER_NAME_LENGTH,
+  MAX_CUSTOM_FILES,
+  SIGNED_GUID_LEN,
+  ENTITY_SENTINEL,
   UpdateType,
   HeaderFlags,
   GameEventValue
-} from './defs';
+} from './constants';
+
+import {
+  DemoCommandInfo,
+  EntityEntry
+} from './classes';
 
 import {
   SendPropType,
   SPROP,
   decodeProp
-} from './prop-decode';
+} from './prop';
 
 import {
   messages,
@@ -44,30 +57,6 @@ export var debug = {
   verbose: true
 };
 
-// Constants.
-const MAX_OSPATH = 260;
-// Largest message that can be sent in bytes.
-const NET_MAX_PAYLOAD = 262144 - 4;
-
-// How many bits to use to encode an edict?
-// # of bits needed to represent max edicts.
-const MAX_EDICT_BITS = 11;
-// Max # of edicts in a level.
-const MAX_EDICTS = ( 1 << MAX_EDICT_BITS );
-
-const MAX_USERDATA_BITS = 14;
-const MAX_USERDATA_SIZE = ( 1 << MAX_USERDATA_BITS );
-const SUBSTRING_BITS = 5;
-
-const NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS = 10;
-
-const MAX_PLAYER_NAME_LENGTH = 128;
-// Max 4 files.
-const MAX_CUSTOM_FILES = 4;
-// Hashed CD Key (32 hex alphabetic chars + 0 terminator).
-const SIGNED_GUID_LEN = 32;
-
-const ENTITY_SENTINEL = 9999;
 
 export function parse( file ) {
   var buffer = new Buffer( new Uint8Array( file ) );
