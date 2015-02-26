@@ -54,7 +54,8 @@ export var options = {
 };
 
 export var debug = {
-  verbose: true
+  verbose: true,
+  profile: false
 };
 
 
@@ -1365,6 +1366,11 @@ export function parse( file ) {
     console.log( 'commands' );
   }
 
+  if ( debug.profile ) {
+    console.time( 'parsing' );
+    console.profile( 'parsing' );
+  }
+
   var size, slice;
   while ( reader.offset < length ) {
     // Read command header.
@@ -1392,6 +1398,12 @@ export function parse( file ) {
         if ( debug.verbose ) {
           console.log( 'dem_stop' );
         }
+
+        if ( debug.profile ) {
+          console.timeEnd( 'parsing' );
+          console.profileEnd( 'parsing' );
+        }
+
         return;
 
       case DemoMessage.DEM_CONSOLECMD:

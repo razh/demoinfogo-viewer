@@ -6,13 +6,14 @@ function createGUI() {
   // Add options interface.
   var gui = new dat.GUI();
 
-  var optionsFolder = gui.addFolder( 'options' );
-  _.forOwn( options, ( value, key ) => optionsFolder.add( options, key ) );
-  optionsFolder.open();
+  function createFolder( options, name ) {
+    var folder = gui.addFolder( name );
+    _.forOwn( options, ( value, key ) => folder.add( options, key ) );
+    folder.open();
+  }
 
-  var debugFolder = gui.addFolder( 'debug' );
-  debugFolder.add( debug, 'verbose' );
-  debugFolder.open();
+  createFolder( options, 'options' );
+  createFolder( debug, 'debug' );
 
   function updateGUI() {
     _.forOwn( gui.__folders, folder => {
