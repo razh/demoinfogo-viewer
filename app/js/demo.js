@@ -1,14 +1,31 @@
-import _ from 'lodash';
-import protobuf from 'protocol-buffers';
+var Buffer = require( 'buffer' ).Buffer;
+
 import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
-import { DemoCommandInfo, EntityEntry, UpdateType, HeaderFlags } from './defs';
-import { SendPropType, SPROP, decodeProp } from './prop-decode';
 
-// brfs packages.
-var fs = require( 'fs' );
-var Buffer = require( 'buffer' ).Buffer;
+import {
+  DemoCommandInfo,
+  EntityEntry,
+  UpdateType,
+  HeaderFlags,
+  GameEventValue
+} from './defs';
+
+import {
+  SendPropType,
+  SPROP,
+  decodeProp
+} from './prop-decode';
+
+import {
+  messages,
+  UserMessageTypes,
+  NETMessageTypes,
+  SVCMessageTypes,
+  DemoMessage
+} from './messages';
+
 
 // Default is to dump out everything.
 export var options = {
@@ -27,17 +44,7 @@ export var debug = {
   verbose: true
 };
 
-// Protocol buffer definitions.
-const messages = protobuf(
-  fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' ) +
-  fs.readFileSync( __dirname + '/../proto/cstrike15_usermessages_public.proto', 'utf8' )
-);
-
-console.log( messages );
-
 // Constants.
-const { NET_Messages, SVC_Messages, ECstrike15UserMessages } = messages;
-
 const MAX_OSPATH = 260;
 // Largest message that can be sent in bytes.
 const NET_MAX_PAYLOAD = 262144 - 4;
@@ -61,53 +68,6 @@ const MAX_CUSTOM_FILES = 4;
 const SIGNED_GUID_LEN = 32;
 
 const ENTITY_SENTINEL = 9999;
-
-const DemoMessage = {
-  // Startup message. Process as fast as possible.
-  DEM_SIGNON: 1,
-  // Normal network packet that is stored off.
-  DEM_PACKET: 2,
-  // Sync client clock to demo tick.
-  DEM_SYNCTICK: 3,
-  // Console command.
-  DEM_CONSOLECMD: 4,
-  // User input command.
-  DEM_USERCMD: 5,
-  // Network data tables.
-  DEM_DATATABLES: 6,
-  // End of time.
-  DEM_STOP: 7,
-  // A blob of binary data understood by a callback function.
-  DEM_CUSTOMDATA: 8,
-  DEM_STRINGTABLES: 9,
-  // Last command. Same as DEM_STRINGTABLES.
-  DEM_LASTCMD: 9
-};
-
-const GameEventValue = {
-  TYPE_STRING: 1,
-  TYPE_FLOAT: 2,
-  TYPE_LONG: 3,
-  TYPE_SHORT: 4,
-  TYPE_BYTE: 5,
-  TYPE_BOOL: 6,
-  TYPE_UINT64: 7,
-  TYPE_WSTRING: 8
-};
-
-/**
- * Invert message objects into arrays for fast lookup.
- */
-function getMessageTypes( messages, prefix ) {
-  return _.reduce( messages, ( array, value, key ) => {
-    array[ value ] = key.replace( prefix, '' );
-    return array;
-  }, [] );
-}
-
-const UserMessageTypes = getMessageTypes( ECstrike15UserMessages, 'CS_UM_' );
-const NETMessageTypes  = getMessageTypes( NET_Messages, 'net_' );
-const SVCMessageTypes  = getMessageTypes( SVC_Messages, 'svc_' );
 
 export function parse( file ) {
   var buffer = new Buffer( new Uint8Array( file ) );

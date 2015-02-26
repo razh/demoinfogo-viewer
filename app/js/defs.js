@@ -128,3 +128,14 @@ export const HeaderFlags = {
   FHDR_DELETE: 2,
   FHDR_ENTERPVS: 4
 };
+
+export const GameEventValue = {
+  TYPE_STRING: 1,
+  TYPE_FLOAT: 2,
+  TYPE_LONG: 3,
+  TYPE_SHORT: 4,
+  TYPE_BYTE: 5,
+  TYPE_BOOL: 6,
+  TYPE_UINT64: 7,
+  TYPE_WSTRING: 8
+};
