@@ -39,6 +39,8 @@ import {
   DemoMessage
 } from './messages';
 
+console.log( messages );
+
 
 // Default is to dump out everything.
 export var options = {

@@ -9,8 +9,6 @@ export const messages = protobuf(
   fs.readFileSync( __dirname + '/../proto/cstrike15_usermessages_public.proto', 'utf8' )
 );
 
-console.log( messages );
-
 export const { NET_Messages, SVC_Messages, ECstrike15UserMessages } = messages;
 
 
