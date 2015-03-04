@@ -1319,7 +1319,7 @@ export function parse( file ) {
         return;
       }
 
-      if ( commandType && !commandHandler ) {
+      if ( !commandHandler ) {
         commandHandler = messages[ 'CSVCMsg_' + commandType ];
       }
 
