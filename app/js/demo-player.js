@@ -12,6 +12,9 @@ import {
   MAX_OSPATH,
   MAX_USERDATA_BITS,
   SUBSTRING_BITS,
+  MAX_PLAYER_NAME_LENGTH,
+  MAX_CUSTOM_FILES,
+  SIGNED_GUID_LEN,
   UpdateType,
   HeaderFlags
 } from './constants';
@@ -97,18 +100,15 @@ export function parse( file ) {
 
       lastEntry = entryIndex;
 
-      let entry = '';
-      let substr = '';
-
+      let entry;
       if ( buffer.readBit() ) {
         const substringCheck = buffer.readBit();
 
         if ( substringCheck ) {
           const index = buffer.readUBits( 5 );
           const bytesToCopy = buffer.readUBits( SUBSTRING_BITS );
-          entry = history[ index ].string.slice( 0, bytesToCopy + 1 );
-          substr = buffer.readCString( 1024 );
-          entry += substr;
+          entry = history[ index ].string.slice( 0, bytesToCopy + 1 ) +
+            buffer.readCString( 1024 );
         } else {
           entry = buffer.readCString( 1024 );
         }
@@ -123,8 +123,8 @@ export function parse( file ) {
       if ( buffer.readBit() ) {
         if ( userDataFixedSize ) {
           bytes = userDataSize;
-          tempBuf = buffer.readCString( Math.floor( userDataSizeBits / 8 ) );
-          tempBuf += String.fromCharCode( buffer.readBits( userDataSizeBits % 8 ) );
+          tempBuf = buffer.readCString( Math.floor( userDataSizeBits / 8 ) ) +
+            String.fromCharCode( buffer.readBits( userDataSizeBits % 8 ) );
         } else {
           bytes = buffer.readUBits( MAX_USERDATA_BITS );
           tempBuf = buffer.read( bytes );
@@ -134,17 +134,15 @@ export function parse( file ) {
       }
 
       if ( !currentEntry ) {
-        currentEntry= '';
+        currentEntry = '';
       }
 
       if ( isUserInfo && userData ) {
         const playerInfo = readPlayerInfo( new BitBufferReader( userData ) );
 
-        let added = false;
         if ( entryIndex < playerInfos.length ) {
           playerInfos[ entryIndex ] = playerInfo;
         } else {
-          added = true;
           playerInfos.push( playerInfo );
         }
       }
@@ -181,7 +179,32 @@ export function parse( file ) {
     });
   }
 
-  function readPlayerInfo() {}
+  function readCRC32( buffer ) {
+    const array = [];
+
+    for ( let i = 0; i < MAX_CUSTOM_FILES; i++ ) {
+      array.push( buffer.readUInt32() );
+    }
+
+    return array;
+  }
+
+  function readPlayerInfo( buffer ) {
+    // Some fields are missing a byte-swap.
+    return {
+      version:         buffer.read( 8 ),
+      xuid:            buffer.read( 8 ),
+      name:            buffer.readString( MAX_PLAYER_NAME_LENGTH ),
+      userID:          buffer.read( 4 ),
+      guid:            buffer.readString( SIGNED_GUID_LEN ),
+      friendsID:       buffer.read( 8 ),
+      friendsName:     buffer.readString( MAX_PLAYER_NAME_LENGTH ),
+      fakeplayer:      buffer.readBool(),
+      ishltv:          buffer.readBool(),
+      customFiles:     readCRC32( buffer ),
+      filesDownloaded: buffer.readUInt8()
+    };
+  }
 
   function dumpDemoPacket( start, length ) {
     while ( reader.offset - start < length ) {
