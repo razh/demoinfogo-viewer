@@ -39,7 +39,7 @@ gulp.task('browser-sync', function() {
 gulp.task('js', function() {
   var bundler = watchify(browserify(SOURCE_DIR + '/js/main.js',
     _.assign({
-      debug: true,
+      debug: true
     }, watchify.args)));
 
   bundler
