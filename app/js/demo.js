@@ -289,7 +289,7 @@ export function parse( file ) {
           if ( csv ) {
             console.log( ', ' + x + ', ' + y + ', ' + z );
           } else {
-            console.log( '  position: ' + x + ', ' + y +', ' + z );
+            console.log( '  position: ' + x + ', ' + y + ', ' + z );
           }
         }
 

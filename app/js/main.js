@@ -16,16 +16,16 @@ function createGUI() {
   createFolder( debug, 'debug' );
 
   function updateGUI() {
-    _.forOwn( gui.__folders, folder => {
-      _.forEach( folder.__controllers, controller => controller.updateDisplay() );
-    });
+    _.forOwn( gui.__folders, folder =>
+      _.forEach( folder.__controllers, controller => controller.updateDisplay() )
+    );
   }
 
   function toggleAll() {
-    _.forEach( [ options, debug ], object => {
+    _.forEach( [ options, debug ], object =>
       // Avoid explicit returns of false from exiting iterator.
-      _.map( object, ( value, key ) => object[ key ] = !value );
-    });
+      _.map( object, ( value, key ) => object[ key ] = !value )
+    );
 
     updateGUI();
   }
@@ -57,6 +57,6 @@ document.addEventListener( 'drop', event => {
 });
 
 document.addEventListener( 'dragover', event => {
-  event.stopPropagation();
   event.preventDefault();
+  event.stopPropagation();
 });

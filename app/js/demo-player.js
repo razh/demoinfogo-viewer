@@ -61,13 +61,110 @@ export function parse( file ) {
 
   console.log( demoHeader );
 
+  let gameEventList;
+
   const stringTables = [];
   const playerInfos  = [];
+  const entities     = [];
 
   // Advance by read size.
   function readRawData() {
     const size = reader.readInt32();
     reader.offset += size;
+  }
+
+  function findPlayerInfo( userID ) {
+    for ( let i = 0, il = playerInfos.length; i < il; i++ ) {
+      const playerInfo = playerInfos[i];
+      if ( playerInfo.userID === userID ) {
+        return playerInfo;
+      }
+    }
+  }
+
+  function findPlayerEntityIndex( userID ) {
+    for ( let i = 0, il = playerInfos.length; i < il; i++ ) {
+      if ( playerInfos[i].userID === userID ) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  function getGameEventDescriptor( message ) {
+    for ( let i = 0, il = gameEventList.descriptors.length; i < il; i++ ) {
+      const descriptor = gameEventList.descriptors[i];
+      if ( descriptor.eventid === message.eventid ) {
+        return descriptor;
+      }
+    }
+  }
+
+  function parsePlayerInfo( field, index ) {
+    const playerInfo = findPlayerInfo( index );
+    if ( !playerInfo ) {
+      return;
+    }
+
+    console.log( ` ${ field }: ${ playerInfo.name } (id: ${ index })` );
+
+    const entityIndex = findPlayerEntityIndex( index ) + 1;
+    const entity = findEntity( entityIndex );
+
+    if ( !entity ) {
+      return;
+    }
+
+    const xyProp = entity.findProp( 'm_vecOrigin' );
+    const zProp  = entity.findProp( 'm_vecOrigin[2]' );
+
+    if ( xyProp && zProp ) {
+      const { x, y } = xyProp.propValue.value;
+      const z = zProp.propValue.value;
+
+      console.log( `  position: ${ x }, ${ y }, ${ z }` );
+    }
+
+    const angle0Prop = entity.findProp( 'm_angEyeAngles[0]' );
+    const angle1Prop = entity.findProp( 'm_angEyeAngles[1]' );
+
+    if ( angle0Prop && angle1Prop ) {
+      const angle0 = angle0Prop.propValue.value;
+      const angle1 = angle1Prop.propValue.value;
+
+      console.log( `  facing: pitch:${ angle0 }, yaw:${ angle1 }` );
+    }
+
+    const teamProp = entity.findProp( 'm_iTeamNum' );
+    if ( teamProp ) {
+      const team = teamProp.propValue.value === 2 ? 'T' : 'CT';
+      console.log( '  team: '  + team );
+    }
+  }
+
+  function parseGameEvent( message, descriptor ) {
+    if ( !descriptor ) {
+      return;
+    }
+
+    for ( let i = 0, il = message.keys.length; i < il; i++ ) {
+      const key = descriptor.keys[i];
+      const value = message.keys[i];
+
+      if ( key.name === 'userid'   ||
+           key.name === 'attacker' ||
+           key.name === 'assister' ) {
+        parsePlayerInfo( key.name, value.val_short );
+      }
+    }
+  }
+
+  function handleGameEvent( message ) {
+    const descriptor = getGameEventDescriptor( message );
+    if ( descriptor ) {
+      parseGameEvent( message, descriptor );
+    }
   }
 
   function parseStringTableUpdate(
@@ -157,6 +254,10 @@ export function parse( file ) {
     });
   }
 
+  function findEntity( entity ) {
+    return entities[ entity ];
+  }
+
   function createStringTable( message ) {
     if ( message.name !== 'userinfo' ) {
       return;
@@ -237,6 +338,10 @@ export function parse( file ) {
 
       if ( commandType === 'PacketEntities' ) {
         createStringTable( message );
+      } else if ( commandType === 'GameEvent' ) {
+        handleGameEvent( message );
+      } else if ( commandType === 'GameEventList' ) {
+        gameEventList = message;
       }
     }
   }
