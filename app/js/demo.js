@@ -1075,9 +1075,9 @@ export function parse( file ) {
               console.log( 'Entity leaves PVS: id:' + newEntity );
             }
 
-            removeEntity( newEntity );
           }
 
+          removeEntity( newEntity );
           break;
 
         case UpdateType.DeltaEnt:

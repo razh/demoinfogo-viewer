@@ -10,11 +10,14 @@ import BitBufferReader from './bit-buffer-reader';
 
 import {
   MAX_OSPATH,
+  MAX_EDICTS,
   MAX_USERDATA_BITS,
   SUBSTRING_BITS,
+  NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS,
   MAX_PLAYER_NAME_LENGTH,
   MAX_CUSTOM_FILES,
   SIGNED_GUID_LEN,
+  ENTITY_SENTINEL,
   UpdateType,
   HeaderFlags
 } from './constants';
@@ -63,9 +66,10 @@ export function parse( file ) {
 
   let gameEventList;
 
-  const stringTables = [];
-  const playerInfos  = [];
-  const entities     = [];
+  const stringTables  = [];
+  let serverClassBits = 0;
+  const playerInfos   = [];
+  const entities      = [];
 
   // Advance by read size.
   function readRawData() {
@@ -254,8 +258,131 @@ export function parse( file ) {
     });
   }
 
+  function readNewEntity() {}
+
   function findEntity( entity ) {
     return entities[ entity ];
+  }
+
+  function addEntity( entity, classIndex, serialNum ) {
+    // If entity already exists, then replace it, else add it.
+    let entry = findEntity( entity );
+    if ( entry ) {
+      entry.classIndex = classIndex;
+      entry.serialNum = serialNum;
+    } else {
+      entry = new EntityEntry( entity, classIndex, serialNum );
+      entities[ entity ] = entry;
+    }
+
+    return entry;
+  }
+
+  function removeEntity( entity ) {
+    entities[ entity ] = undefined;
+  }
+
+  function parsePacketEntities( message ) {
+    const entityBitBuffer = new BitBufferReader( message.entity_data );
+
+    const asDelta = message.is_delta;
+    let headerCount = message.updated_entries;
+    let headerBase = -1;
+    let newEntity = -1;
+    let updateFlags = 0;
+
+    let updateType = UpdateType.PreserveEnt;
+
+    let entity;
+    while ( updateType < UpdateType.Finished ) {
+      headerCount--;
+
+      const isEntity = headerCount >= 0;
+      if ( isEntity ) {
+        updateFlags = HeaderFlags.FHDR_ZERO;
+
+        newEntity = headerBase + 1 + entityBitBuffer.readUBitVar();
+        headerBase = newEntity;
+
+        // Leave PVS flag.
+        if ( entityBitBuffer.readBit() === 0 ) {
+          // Enter PVS flag.
+          if ( entityBitBuffer.readBit() !== 0 ) {
+            updateFlags |= HeaderFlags.FHDR_ENTERPVS;
+          }
+        } else {
+          updateFlags |= HeaderFlags.FHDR_LEAVEPVS;
+
+          // Force delete flag.
+          if ( entityBitBuffer.readBit() !== 0 ) {
+            updateFlags |= HeaderFlags.FHDR_DELETE;
+          }
+        }
+      }
+
+      for ( updateType = UpdateType.PreserveEnt;
+            updateType === UpdateType.PreserveEnt; ) {
+        // Figure out what kind of an update this is.
+        if ( !isEntity || newEntity > ENTITY_SENTINEL ) {
+          updateType = UpdateType.Finished;
+        } else {
+          if ( updateFlags & HeaderFlags.FHDR_ENTERPVS ) {
+            updateType = UpdateType.EnterPVS;
+          } else if ( updateFlags & HeaderFlags.FHDR_LEAVEPVS ) {
+            updateType = UpdateType.LeavePVS;
+          } else {
+            updateType = UpdateType.DeltaEnt;
+          }
+        }
+      }
+
+      switch ( updateType ) {
+        case UpdateType.EnterPVS:
+          const classIndex = entityBitBuffer.readUBits( serverClassBits );
+          const serialNum = entityBitBuffer.readUBits( NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS );
+          entity = addEntity( newEntity, classIndex, serialNum );
+          readNewEntity( entityBitBuffer, entity );
+          break;
+
+        case UpdateType.LeavePVS:
+          // Should never happen on a full update.
+          if ( !asDelta ) {
+            updateType = UpdateType.Failed;
+            // Break out.
+            throw new Error( 'WARNING: LeavePVS on full update.' );
+          }
+
+          removeEntity( newEntity );
+          break;
+
+        case UpdateType.DeltaEnt:
+          entity = findEntity( newEntity );
+          if ( entity ) {
+            readNewEntity( entityBitBuffer, entity );
+          } else {
+            throw new Error();
+          }
+
+          break;
+
+        case UpdateType.PreserveEnt:
+          // Should never happen on a full update.
+          if ( !asDelta ) {
+            updateType = UpdateType.Failed;
+            // Break out.
+            throw new Error( 'WARNING: PreserveEnt on full update.' );
+          }
+
+          if ( newEntity >= MAX_EDICTS ) {
+            throw new Error( 'PreserveEnt: newEntity == MAX_EDICTS.' );
+          }
+
+          break;
+
+        default:
+          break;
+      }
+    }
   }
 
   function createStringTable( message ) {
@@ -338,6 +465,8 @@ export function parse( file ) {
 
       if ( commandType === 'PacketEntities' ) {
         createStringTable( message );
+      } else if ( commandType === 'PacketEntities' ) {
+        parsePacketEntities( message );
       } else if ( commandType === 'GameEvent' ) {
         handleGameEvent( message );
       } else if ( commandType === 'GameEventList' ) {
