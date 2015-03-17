@@ -68,6 +68,7 @@ export function parse( file ) {
 
   const stringTables  = [];
   let serverClassBits = 0;
+  const serverClasses = [];
   const playerInfos   = [];
   const entities      = [];
 
@@ -217,11 +218,10 @@ export function parse( file ) {
         currentEntry = entry;
       }
 
-      let tempBuf = '';
       let userData;
-      let bytes = 0;
-
       if ( buffer.readBit() ) {
+        let bytes;
+        let tempBuf;
         if ( userDataFixedSize ) {
           bytes = userDataSize;
           tempBuf = buffer.readCString( Math.floor( userDataSizeBits / 8 ) ) +
@@ -258,7 +258,81 @@ export function parse( file ) {
     });
   }
 
-  function readNewEntity() {}
+  function getSendPropByIndex( classIndex, index ) {
+    if ( index < serverClasses[ classIndex ].flattenedProps.length ) {
+      return serverClasses[ classIndex ].flattenedProps[ index ];
+    }
+  }
+
+  function readFieldIndex( entityBitBuffer, lastIndex, newWay ) {
+    if ( newWay ) {
+      if ( entityBitBuffer.readBit() ) {
+        return lastIndex + 1;
+      }
+    }
+
+    let ret = 0;
+    if ( newWay && entityBitBuffer.readBit() ) {
+      // Read 3 bits.
+      ret = entityBitBuffer.readUBits( 3 );
+    } else {
+      // Read 7 bits.
+      ret = entityBitBuffer.readUBits( 7 );
+      switch ( ret & ( 32 | 64 ) ) {
+        case 32:
+          ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 2 ) << 5 );
+          break;
+
+        case 64:
+          ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 4 ) << 5 );
+          break;
+
+        case 96:
+          ret = ( ret & ~96 ) | ( entityBitBuffer.readUBits( 7 ) << 5 );
+          break;
+      }
+    }
+
+    // End marker is 4095 for CS:GO.
+    if ( ret === 0xFFF ) {
+      return -1;
+    }
+
+    return lastIndex + 1 + ret;
+  }
+
+  function readNewEntity( entityBitBuffer, entity ) {
+    //  0 = old way, 1 = new way.
+    const newWay = entityBitBuffer.readBit() === 1;
+
+    const fieldIndices = [];
+    let index = -1;
+    do {
+      index = readFieldIndex( entityBitBuffer, index, newWay );
+      if ( index !== -1 ) {
+        fieldIndices.push( index );
+      }
+    } while ( index !== -1 );
+
+    for ( let i = 0, il = fieldIndices.length; i < il; i++ ) {
+      let sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[i] );
+      if ( sendProp ) {
+        let prop = decodeProp(
+          entityBitBuffer,
+          sendProp,
+          entity.classIndex,
+          fieldIndices[i],
+          // Quiet.
+          true
+        );
+        entity.addOrUpdateProp( sendProp, prop );
+      } else {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   function findEntity( entity ) {
     return entities[ entity ];
