@@ -739,7 +739,8 @@ export function parse( file ) {
           });
         } else {
           flattenedProps.push({
-            prop: sendProp
+            prop: sendProp,
+            arrayElementProp: undefined
           });
         }
       }
@@ -803,7 +804,7 @@ export function parse( file ) {
           if ( prop.priority === priority ||
                priority === 64 && ( SPROP.CHANGES_OFTEN & prop.flags ) ) {
             if ( start !== currentProp ) {
-              var temp  = flattenedProps[ start ];
+              var temp = flattenedProps[ start ];
               flattenedProps[ start ] = flattenedProps[ currentProp ];
               flattenedProps[ currentProp ] = temp;
             }

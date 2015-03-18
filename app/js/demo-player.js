@@ -4,7 +4,6 @@
  */
 const { Buffer } = require( 'buffer' );
 
-import BN from 'bn.js';
 import BufferReader from './buffer-reader';
 import BitBufferReader from './bit-buffer-reader';
 
@@ -35,7 +34,6 @@ import {
 
 import {
   messages,
-  UserMessageTypes,
   NETMessageTypes,
   SVCMessageTypes,
   DemoMessage
@@ -69,13 +67,21 @@ export function parse( file ) {
   const stringTables  = [];
   let serverClassBits = 0;
   const serverClasses = [];
-  const playerInfos   = [];
+  const dataTables    = [];
+  let currentExcludes = [];
   const entities      = [];
+  const playerInfos   = [];
 
   // Advance by read size.
   function readRawData() {
     const size = reader.readInt32();
     reader.offset += size;
+  }
+
+  function readFromBuffer( buffer ) {
+    const size = buffer.readVarInt32();
+    // Assume read buffer is byte-aligned.
+    return buffer.read( size );
   }
 
   function findPlayerInfo( userID ) {
@@ -112,7 +118,7 @@ export function parse( file ) {
       return;
     }
 
-    console.log( ` ${ field }: ${ playerInfo.name } (id: ${ index })` );
+    console.log( ` ${ field }: ${ playerInfo.name } (id:${ index })` );
 
     const entityIndex = findPlayerEntityIndex( index ) + 1;
     const entity = findEntity( entityIndex );
@@ -207,7 +213,7 @@ export function parse( file ) {
         const substringCheck = buffer.readBit();
 
         if ( substringCheck ) {
-          const index = buffer.readUBits( 5 );
+          const index       = buffer.readUBits( 5 );
           const bytesToCopy = buffer.readUBits( SUBSTRING_BITS );
           entry = history[ index ].string.slice( 0, bytesToCopy + 1 ) +
             buffer.readCString( 1024 );
@@ -223,11 +229,11 @@ export function parse( file ) {
         let bytes;
         let tempBuf;
         if ( userDataFixedSize ) {
-          bytes = userDataSize;
+          bytes   = userDataSize;
           tempBuf = buffer.readCString( Math.floor( userDataSizeBits / 8 ) ) +
             String.fromCharCode( buffer.readBits( userDataSizeBits % 8 ) );
         } else {
-          bytes = buffer.readUBits( MAX_USERDATA_BITS );
+          bytes   = buffer.readUBits( MAX_USERDATA_BITS );
           tempBuf = buffer.read( bytes );
         }
 
@@ -258,10 +264,199 @@ export function parse( file ) {
     });
   }
 
+  function getTableByName( name ) {
+    for ( let i = 0, il = dataTables.length; i < il; i++ ) {
+      if ( dataTables[i].net_table_name === name ) {
+        return dataTables[i];
+      }
+    }
+  }
+
   function getSendPropByIndex( classIndex, index ) {
     if ( index < serverClasses[ classIndex ].flattenedProps.length ) {
       return serverClasses[ classIndex ].flattenedProps[ index ];
     }
+  }
+
+  function gatherExcludes( table ) {
+    for ( let i = 0, il = table.props.length; i < il; i++ ) {
+      const sendProp = table.props[i];
+      if ( sendProp.flags & SPROP.EXCLUDE ) {
+        currentExcludes.push({
+          var_name:       sendProp.var_name,
+          dt_name:        sendProp.dt_name,
+          net_table_name: sendProp.net_table_name
+        });
+      }
+
+      if ( sendProp.type === SendPropType.DPT_DataTable ) {
+        const subTable = getTableByName( sendProp.dt_name );
+        if ( subTable ) {
+          gatherExcludes( subTable );
+        }
+      }
+    }
+  }
+
+  function isPropExcluded( table, checkSendProp ) {
+    for ( let i = 0, il = currentExcludes.length; i < il; i++ ) {
+      if ( table.net_table_name   === currentExcludes[i].dt_name &&
+           checkSendProp.var_name === currentExcludes[i].var_name ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function gatherProps_IterateProps( table, serverClassIndex, flattenedProps ) {
+    for ( let i = 0, il = table.props.length; i < il; i++ ) {
+      const sendProp = table.props[i];
+      if ( sendProp.flags & SPROP.INSIDEARRAY ||
+           sendProp.flags & SPROP.EXCLUDE     ||
+           isPropExcluded( table, sendProp ) ) {
+        continue;
+      }
+
+      if ( sendProp.type === SendPropType.DPT_DataTable ) {
+        const subTable = getTableByName( sendProp.dt_name );
+        if ( subTable ) {
+          if ( sendProp.flags & SPROP.COLLAPSIBLE ) {
+            gatherProps_IterateProps( subTable, serverClassIndex, flattenedProps );
+          } else {
+            gatherProps( subTable, serverClassIndex );
+          }
+        }
+      } else {
+        flattenedProps.push({
+          prop:             sendProp,
+          arrayElementProp: sendProp.type === SendPropType.DPT_Array ?
+            table.props[ i - 1 ] :
+            undefined
+        });
+      }
+    }
+  }
+
+  function gatherProps( table, serverClassIndex ) {
+    const tempFlattenedProps = [];
+    gatherProps_IterateProps( table, serverClassIndex, tempFlattenedProps );
+
+    const flattenedProps = serverClasses[ serverClassIndex ].flattenedProps;
+    for ( let i = 0, il = tempFlattenedProps.length; i < il; i++ ) {
+      flattenedProps.push( tempFlattenedProps[i] );
+    }
+  }
+
+  function flattenDataTable( serverClassIndex )  {
+    const table = dataTables[ serverClasses[ serverClassIndex ].dataTable ];
+
+    currentExcludes = [];
+    gatherExcludes( table );
+
+    gatherProps( table, serverClassIndex );
+
+    const flattenedProps = serverClasses[ serverClassIndex ].flattenedProps;
+
+    // Get priorities.
+    const priorities = [ 64 ];
+    for ( let i = 0, il = flattenedProps.length; i < il; i++ ) {
+      let priority = flattenedProps[i].prop.priority;
+      let found    = false;
+      for ( let j = 0, jl = priorities.length; j < jl; j++ ) {
+        if ( priorities[j] === priority ) {
+          found = true;
+          break;
+        }
+      }
+
+      if ( !found ) {
+        priorities.push( priority );
+      }
+    }
+
+    priorities.sort( ( a, b ) => a - b );
+
+    // Sort flattenedProps by priority.
+    let start = 0;
+    for (
+      let priorityIndex = 0, prioritiesLength = priorities.length;
+      priorityIndex < prioritiesLength;
+      priorityIndex++
+    ) {
+      const priority = priorities[ priorityIndex ];
+
+      while ( true ) {
+        let currentProp = start;
+        while ( currentProp < flattenedProps.length ) {
+          const prop = flattenedProps[ currentProp ].prop;
+
+          if ( prop.priority === priority ||
+               priority      === 64 && ( SPROP.CHANGES_OFTEN & prop.flags ) ) {
+            if ( start !== currentProp ) {
+              const temp = flattenedProps[ start ];
+              flattenedProps[ start ] = flattenedProps[ currentProp ];
+              flattenedProps[ currentProp ] = temp;
+            }
+
+            start++;
+            break;
+          }
+
+          currentProp++;
+        }
+
+        if ( currentProp === flattenedProps.length ) {
+          break;
+        }
+      }
+    }
+  }
+
+  function parseDataTable( slice ) {
+    while ( true ) {
+      // type.
+      slice.readVarInt32();
+
+      const buffer  = readFromBuffer( slice );
+      const message = messages.CSVCMsg_SendTable.decode( buffer );
+      if ( message.is_end ) {
+        break;
+      }
+
+      dataTables.push( message );
+    }
+
+    const serverClassCount = slice.readShort();
+    for ( let i = 0; i < serverClassCount; i++ ) {
+      const entry = {
+        classID:        slice.readShort(),
+        name:           slice.readCString( 256 ),
+        dtName:         slice.readCString( 256 ),
+        dataTable:      -1,
+        flattenedProps: []
+      };
+
+      // Find the data table by name.
+      for ( let j = 0, jl = dataTables.length; j < jl; j++ ) {
+        if ( entry.dtName === dataTables[j].net_table_name ) {
+          entry.dataTable = j;
+          break;
+        }
+      }
+
+      serverClasses.push( entry );
+    }
+
+    for ( let i = 0; i < serverClassCount; i++ ) {
+      flattenDataTable( i );
+    }
+
+    // Perform integer log2() to set serverClassBits
+    let temp = serverClassCount;
+    serverClassBits = 0;
+    while ( temp >>= 1 ) { ++serverClassBits; }
+    serverClassBits++;
   }
 
   function readFieldIndex( entityBitBuffer, lastIndex, newWay ) {
@@ -315,9 +510,9 @@ export function parse( file ) {
     } while ( index !== -1 );
 
     for ( let i = 0, il = fieldIndices.length; i < il; i++ ) {
-      let sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[i] );
+      const sendProp = getSendPropByIndex( entity.classIndex, fieldIndices[i] );
       if ( sendProp ) {
-        let prop = decodeProp(
+        const prop = decodeProp(
           entityBitBuffer,
           sendProp,
           entity.classIndex,
@@ -343,7 +538,7 @@ export function parse( file ) {
     let entry = findEntity( entity );
     if ( entry ) {
       entry.classIndex = classIndex;
-      entry.serialNum = serialNum;
+      entry.serialNum  = serialNum;
     } else {
       entry = new EntityEntry( entity, classIndex, serialNum );
       entities[ entity ] = entry;
@@ -359,10 +554,10 @@ export function parse( file ) {
   function parsePacketEntities( message ) {
     const entityBitBuffer = new BitBufferReader( message.entity_data );
 
-    const asDelta = message.is_delta;
+    const asDelta   = message.is_delta;
     let headerCount = message.updated_entries;
-    let headerBase = -1;
-    let newEntity = -1;
+    let headerBase  = -1;
+    let newEntity   = -1;
     let updateFlags = 0;
 
     let updateType = UpdateType.PreserveEnt;
@@ -413,7 +608,7 @@ export function parse( file ) {
       switch ( updateType ) {
         case UpdateType.EnterPVS:
           const classIndex = entityBitBuffer.readUBits( serverClassBits );
-          const serialNum = entityBitBuffer.readUBits( NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS );
+          const serialNum  = entityBitBuffer.readUBits( NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS );
           entity = addEntity( newEntity, classIndex, serialNum );
           readNewEntity( entityBitBuffer, entity );
           break;
@@ -476,7 +671,7 @@ export function parse( file ) {
     );
 
     stringTables.push({
-      name: message.name,
+      name:       message.name,
       maxEntries: message.max_entries
     });
   }
@@ -537,7 +732,7 @@ export function parse( file ) {
 
       const message = commandHandler.decode( reader.read( size ) );
 
-      if ( commandType === 'PacketEntities' ) {
+      if ( commandType === 'CreateStringTable' ) {
         createStringTable( message );
       } else if ( commandType === 'PacketEntities' ) {
         parsePacketEntities( message );
@@ -550,19 +745,24 @@ export function parse( file ) {
   }
 
   function handleDemoPacket() {
-    const democmdinfo = DemoCommandInfo.read( reader );
+    // democmdinfo struct.
+    DemoCommandInfo.read( reader );
 
-    const seqNrIn  = reader.readInt32();
-    const seqNrOut = reader.readInt32();
+    // seqNrIn.
+    reader.readInt32();
+    // seqNrOut.
+    reader.readInt32();
 
     const length = reader.readInt32();
     dumpDemoPacket( reader.offset, length );
   }
 
   while ( reader.offset < length ) {
-    const command    = reader.readUInt8();
-    const timestamp  = reader.readInt32();
-    const playerSlot = reader.readUInt8();
+    const command = reader.readUInt8();
+    // timestamp.
+    reader.readInt32();
+    // playerSlot.
+    reader.readUInt8();
 
     switch ( command ) {
       case DemoMessage.DEM_SYNCTICK:
@@ -577,7 +777,9 @@ export function parse( file ) {
         break;
 
       case DemoMessage.DEM_DATATABLES:
-        readRawData();
+        const size  = reader.readInt32();
+        const slice = new BitBufferReader( reader.read( size ) );
+        parseDataTable( slice );
         break;
 
       case DemoMessage.DEM_STRINGTABLES:
