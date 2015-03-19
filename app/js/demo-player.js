@@ -70,7 +70,7 @@ export function parse( file ) {
   const dataTables    = [];
   let currentExcludes = [];
   const entities      = [];
-  const playerInfos   = [];
+  let playerInfos     = [];
 
   // Advance by read size.
   function readRawData() {
@@ -703,6 +703,62 @@ export function parse( file ) {
     };
   }
 
+  function dumpStringTable( slice, isUserInfo ) {
+    const stringCount = slice.readWord();
+    if ( isUserInfo ) {
+      playerInfos = [];
+    }
+
+    for ( let i = 0; i < stringCount; i++ ) {
+      const stringName = slice.readCString( 4096 );
+      if ( stringName.length >= 100 ) {
+        throw new Error();
+      }
+
+      if ( slice.readBit() === 1 ) {
+        const userDataSize = slice.readWord();
+        if ( !userDataSize ) {
+          throw new Error();
+        }
+
+        const data = slice.read( userDataSize );
+        if ( isUserInfo && data ) {
+          const playerInfo = readPlayerInfo( new BitBufferReader( data ) );
+          console.log(playerInfo.userID)
+          playerInfos.push( playerInfo );
+        }
+      }
+    }
+
+    // Client side stuff.
+    // Read bit.
+    if ( slice.readBit() === 1 ) {
+      const stringCount = slice.readWord();
+      for ( let i = 0; i < stringCount; i++ ) {
+        const stringName = slice.readCString( 4096 );
+
+        if ( slice.readBit() === 1 ) {
+          const userDataSize = slice.readWord();
+          if ( !userDataSize ) {
+            throw new Error();
+          }
+
+          // data.
+          slice.readCString( userDataSize + 1 );
+        }
+      }
+    }
+  }
+
+  function dumpStringTables( slice ) {
+    const tableCount = slice.readByte();
+    for ( let i = 0; i < tableCount; i++ ) {
+      const tableName  = slice.readCString( 256 );
+      const isUserInfo = tableName === 'userinfo';
+      dumpStringTable( slice, isUserInfo );
+    }
+  }
+
   function dumpDemoPacket( start, length ) {
     while ( reader.offset - start < length ) {
       const command = reader.readVarInt32();
@@ -764,6 +820,7 @@ export function parse( file ) {
     // playerSlot.
     reader.readUInt8();
 
+    let size, slice;
     switch ( command ) {
       case DemoMessage.DEM_SYNCTICK:
         break;
@@ -777,13 +834,15 @@ export function parse( file ) {
         break;
 
       case DemoMessage.DEM_DATATABLES:
-        const size  = reader.readInt32();
-        const slice = new BitBufferReader( reader.read( size ) );
+        size  = reader.readInt32();
+        slice = new BitBufferReader( reader.read( size ) );
         parseDataTable( slice );
         break;
 
       case DemoMessage.DEM_STRINGTABLES:
-        readRawData();
+        size  = reader.readInt32();
+        slice = new BitBufferReader( reader.read( size ) );
+        dumpStringTables( slice );
         break;
 
       case DemoMessage.DEM_USERCMD:
