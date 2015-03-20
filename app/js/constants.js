@@ -35,7 +35,7 @@ export const UpdateType = {
   // Finished parsing entities successfully.
   Finished: 4,
   // Parsing error occured while reading entities.
-  Failed: 5,
+  Failed: 5
 };
 
 // Flags for delta encoding header.

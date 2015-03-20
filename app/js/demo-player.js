@@ -121,7 +121,7 @@ export function parse( file ) {
     console.log( ` ${ field }: ${ playerInfo.name } (id:${ index })` );
 
     const entityIndex = findPlayerEntityIndex( index ) + 1;
-    const entity = findEntity( entityIndex );
+    const entity      = findEntity( entityIndex );
 
     if ( !entity ) {
       return;
@@ -160,7 +160,7 @@ export function parse( file ) {
     }
 
     for ( let i = 0, il = message.keys.length; i < il; i++ ) {
-      const key = descriptor.keys[i];
+      const key   = descriptor.keys[i];
       const value = message.keys[i];
 
       if ( key.name === 'userid'   ||
@@ -724,7 +724,6 @@ export function parse( file ) {
         const data = slice.read( userDataSize );
         if ( isUserInfo && data ) {
           const playerInfo = readPlayerInfo( new BitBufferReader( data ) );
-          console.log(playerInfo.userID)
           playerInfos.push( playerInfo );
         }
       }
@@ -735,7 +734,8 @@ export function parse( file ) {
     if ( slice.readBit() === 1 ) {
       const stringCount = slice.readWord();
       for ( let i = 0; i < stringCount; i++ ) {
-        const stringName = slice.readCString( 4096 );
+        // stringName.
+        slice.readCString( 4096 );
 
         if ( slice.readBit() === 1 ) {
           const userDataSize = slice.readWord();
