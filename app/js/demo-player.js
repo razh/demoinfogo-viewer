@@ -112,6 +112,65 @@ export function parse( file ) {
     }
   }
 
+  function handlePlayerConnectDisconnectEvents( message, descriptor ) {
+    // Need to handle player_connect and player_disconnect because this is
+    // the only place bots get added to our player info array.
+    // Actual players come in via string tables.
+    const playerDisconnect = descriptor.name === 'player_disconnect';
+    if ( descriptor.name !== 'player_connect' && !playerDisconnect ) {
+      return false;
+    }
+
+    let userid = -1;
+    let index  = -1;
+    let name;
+    let bot = false;
+    for ( let i = 0, il = message.keys.length; i < il; i++ ) {
+      const key   = descriptor.keys[i];
+      const value = message.keys[i];
+
+      if ( key.name === 'userid' ) {
+        userid = value.val_short;
+      } else if ( key.name === 'index' ) {
+        index = value.val_byte;
+      } else if ( key.name === 'name' ) {
+        name = value.val_string;
+      } else if ( key.name === 'networkid' ) {
+        bot = value.val_string === 'BOT';
+      } else if ( key.name === 'bot' ) {
+        bot = value.val_bool;
+      }
+    }
+
+    if ( playerDisconnect ) {
+      // Mark the player info slot as disconnected.
+      const playerInfo  = findPlayerInfo( userid );
+      playerInfo.name   = 'disconnected';
+      playerInfo.userID = -1;
+      playerInfo.guid   = '';
+    } else {
+      const newPlayer      = {};
+      newPlayer.userID     = userid;
+      newPlayer.name       = name;
+      newPlayer.fakeplayer = bot;
+      if ( bot ) {
+        newPlayer.guid = 'BOT';
+      }
+
+      if ( index < playerInfos.length ) {
+        // Only replace existing player slot if the userID is different
+        // (very unlikely).
+        if ( playerInfos[ index ].userID !== userid ) {
+          playerInfos[ index ] = newPlayer;
+        }
+      } else {
+        playerInfos.push( newPlayer );
+      }
+    }
+
+    return true;
+  }
+
   function parsePlayerInfo( field, index ) {
     const playerInfo = findPlayerInfo( index );
     if ( !playerInfo ) {
@@ -156,6 +215,10 @@ export function parse( file ) {
 
   function parseGameEvent( message, descriptor ) {
     if ( !descriptor ) {
+      return;
+    }
+
+    if ( handlePlayerConnectDisconnectEvents( message, descriptor ) ) {
       return;
     }
 
