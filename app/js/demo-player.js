@@ -39,6 +39,34 @@ import {
   DemoMessage
 } from './messages';
 
+export class PlayerInfo {
+  constructor( {
+    version         = [],
+    xuid            = [],
+    name            = '',
+    userID          = [],
+    guid            = [],
+    friendsID       = [],
+    friendsName     = [],
+    fakeplayer      = false,
+    ishltv          = false,
+    customFiles     = [],
+    filesDownloaded = 0
+  } = {} ) {
+    this.version         = version;
+    this.xuid            = xuid;
+    this.name            = name;
+    this.userID          = userID;
+    this.guid            = guid;
+    this.friendsID       = friendsID;
+    this.friendsName     = friendsName;
+    this.fakeplayer      = fakeplayer;
+    this.ishltv          = ishltv;
+    this.customFiles     = customFiles;
+    this.filesDownloaded = filesDownloaded;
+  }
+}
+
 export function parse( file ) {
   console.time( 'parsing' );
 
@@ -149,7 +177,7 @@ export function parse( file ) {
       playerInfo.userID = -1;
       playerInfo.guid   = '';
     } else {
-      const newPlayer      = {};
+      const newPlayer      = new PlayerInfo();
       newPlayer.userID     = userid;
       newPlayer.name       = name;
       newPlayer.fakeplayer = bot;
@@ -749,21 +777,39 @@ export function parse( file ) {
     return array;
   }
 
+  function lowLevelByteSwap( array ) {
+    return [].slice.call( array ).reverse();
+  }
+
   function readPlayerInfo( buffer ) {
     // Some fields are missing a byte-swap.
-    return {
-      version:         buffer.read( 8 ),
-      xuid:            buffer.read( 8 ),
-      name:            buffer.readString( MAX_PLAYER_NAME_LENGTH ),
-      userID:          buffer.read( 4 ),
-      guid:            buffer.readString( SIGNED_GUID_LEN ),
-      friendsID:       buffer.read( 8 ),
-      friendsName:     buffer.readString( MAX_PLAYER_NAME_LENGTH ),
-      fakeplayer:      buffer.readBool(),
-      ishltv:          buffer.readBool(),
-      customFiles:     readCRC32( buffer ),
-      filesDownloaded: buffer.readUInt8()
-    };
+    const version         = buffer.read( 8 );
+    const xuid            = buffer.read( 8 );
+    const name            = buffer.readString( MAX_PLAYER_NAME_LENGTH );
+    let userID            = buffer.read( 4 );
+    const guid            = buffer.readString( SIGNED_GUID_LEN );
+    const friendsID       = buffer.read( 8 );
+    const friendsName     = buffer.readString( MAX_PLAYER_NAME_LENGTH );
+    const fakeplayer      = buffer.readBool();
+    const ishltv          = buffer.readBool();
+    const customFiles     = readCRC32( buffer );
+    const filesDownloaded = buffer.readUInt8();
+
+    userID = new Buffer( lowLevelByteSwap( userID ) ).readUInt32LE( 0 );
+
+    return new PlayerInfo({
+      version,
+      xuid,
+      name,
+      userID,
+      guid,
+      friendsID,
+      friendsName,
+      fakeplayer,
+      ishltv,
+      customFiles,
+      filesDownloaded
+    });
   }
 
   function dumpStringTable( slice, isUserInfo ) {
