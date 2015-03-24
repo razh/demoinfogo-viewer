@@ -39,6 +39,15 @@ import {
   DemoMessage
 } from './messages';
 
+import {
+  PlayerTicks,
+  PlayerTick
+} from './demo-player-data';
+
+const debug = {
+  verbose: false
+};
+
 export class PlayerInfo {
   constructor( {
     version         = [],
@@ -99,6 +108,8 @@ export function parse( file ) {
   let currentExcludes = [];
   const entities      = [];
   let playerInfos     = [];
+
+  const playerTicks = new PlayerTicks();
 
   // Advance by read size.
   function readRawData() {
@@ -205,7 +216,9 @@ export function parse( file ) {
       return;
     }
 
-    console.log( ` ${ field }: ${ playerInfo.name } (id:${ index })` );
+    if ( debug.verbose ) {
+      console.log( ` ${ field }: ${ playerInfo.name } (id:${ index })` );
+    }
 
     const entityIndex = findPlayerEntityIndex( index ) + 1;
     const entity      = findEntity( entityIndex );
@@ -214,6 +227,11 @@ export function parse( file ) {
       return;
     }
 
+    const playerTick = new PlayerTick({
+      id: index,
+      name: playerInfo.name
+    });
+
     const xyProp = entity.findProp( 'm_vecOrigin' );
     const zProp  = entity.findProp( 'm_vecOrigin[2]' );
 
@@ -221,7 +239,13 @@ export function parse( file ) {
       const { x, y } = xyProp.propValue.value;
       const z = zProp.propValue.value;
 
-      console.log( `  position: ${ x }, ${ y }, ${ z }` );
+      playerTick.x = x;
+      playerTick.y = y;
+      playerTick.z = z;
+
+      if ( debug.verbose ) {
+        console.log( `  position: ${ x }, ${ y }, ${ z }` );
+      }
     }
 
     const angle0Prop = entity.findProp( 'm_angEyeAngles[0]' );
@@ -231,14 +255,24 @@ export function parse( file ) {
       const angle0 = angle0Prop.propValue.value;
       const angle1 = angle1Prop.propValue.value;
 
-      console.log( `  facing: pitch:${ angle0 }, yaw:${ angle1 }` );
+      playerTick.pitch = angle0;
+      playerTick.yaw   = angle1;
+
+      if ( debug.verbose ) {
+        console.log( `  facing: pitch:${ angle0 }, yaw:${ angle1 }` );
+      }
     }
 
     const teamProp = entity.findProp( 'm_iTeamNum' );
     if ( teamProp ) {
       const team = teamProp.propValue.value === 2 ? 'T' : 'CT';
-      console.log( '  team: '  + team );
+
+      if ( debug.verbose ) {
+        console.log( '  team: '  + team );
+      }
     }
+
+    playerTicks.push( playerTick );
   }
 
   function parseGameEvent( message, descriptor ) {
@@ -905,6 +939,8 @@ export function parse( file ) {
         handleGameEvent( message );
       } else if ( commandType === 'GameEventList' ) {
         gameEventList = message;
+      } else if ( commandType === 'Tick' ) {
+        playerTicks.tick = message.tick;
       }
     }
   }
@@ -935,6 +971,7 @@ export function parse( file ) {
         break;
 
       case DemoMessage.DEM_STOP:
+        console.log( playerTicks );
         console.timeEnd( 'parsing' );
         return;
 

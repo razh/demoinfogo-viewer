@@ -1,5 +1,6 @@
 export class PlayerTick {
   constructor( {
+    id = '',
     name = '',
     x = 0,
     y = 0,
@@ -7,6 +8,7 @@ export class PlayerTick {
     pitch = 0,
     yaw = 0
   } = {} ) {
+    this.id = id;
     this.name = name;
 
     this.x = x;
@@ -18,15 +20,16 @@ export class PlayerTick {
   }
 }
 
-export default class PlayerTicks {
-  constructor( offset = 0 ) {
+export class PlayerTicks {
+  constructor() {
     this.ticks = [];
-    this.offset = offset;
     this.tick = 0;
   }
 
   push( player ) {
-    const index = this.tick - this.offset;
-    this.ticks[ index ].push( new PlayerTick( player ) );
+    const tick = this.ticks[ this.tick ] || [];
+    tick.push( new PlayerTick( player ) );
+    this.ticks[ this.tick ] = tick;
+    return this;
   }
 }
