@@ -23,13 +23,20 @@ export class PlayerTick {
 export class PlayerTicks {
   constructor() {
     this.ticks = [];
-    this.tick = 0;
+    this.index = 0;
+    this.start = Infinity;
+  }
+
+  tick( tick ) {
+    this.index = tick;
+    this.start = Math.min( this.start, tick );
+    return this;
   }
 
   push( player ) {
-    const tick = this.ticks[ this.tick ] || [];
+    const tick = this.ticks[ this.index ] || [];
     tick.push( new PlayerTick( player ) );
-    this.ticks[ this.tick ] = tick;
+    this.ticks[ this.index ] = tick;
     return this;
   }
 }

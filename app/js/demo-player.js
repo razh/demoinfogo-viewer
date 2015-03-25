@@ -940,7 +940,7 @@ export function parse( file ) {
       } else if ( commandType === 'GameEventList' ) {
         gameEventList = message;
       } else if ( commandType === 'Tick' ) {
-        playerTicks.tick = message.tick;
+        playerTicks.tick( message.tick );
       }
     }
   }
