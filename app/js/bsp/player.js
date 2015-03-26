@@ -1,16 +1,21 @@
 import THREE from 'three';
 
 export default class Player {
-  constructor( ticks, id ) {
-    this.vertices = [];
+  constructor( playerTicks, id ) {
+    this.geometry = new THREE.Geometry();
 
-    for ( let i = ticks.start, il = ticks.length - ticks.start; i < il; i++ ) {
+    const { ticks, start } = playerTicks;
+
+    for ( let i = start, il = ticks.length - start; i < il; i++ ) {
       const tick = ticks[i];
+      if ( !tick ) {
+        continue;
+      }
 
       for ( let j = 0, jl = tick.length; j < jl; j++ ) {
         const player = tick[j];
         if ( player.id === id ) {
-          this.vertices.push( new THREE.Vector3().copy( player ) );
+          this.geometry.vertices.push( new THREE.Vector3().copy( player ) );
         }
       }
     }
