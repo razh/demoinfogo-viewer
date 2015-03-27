@@ -247,7 +247,7 @@ export function animate() {
     0.5 * scale * radius
   );
 
-  camera.lookAt( geometry.boundingSphere.center );
+  camera.lookAt( center );
   camera.up.set( 0, 0, 1 );
 
   renderer.render( scene, camera );
