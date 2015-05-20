@@ -44,6 +44,9 @@ import {
   PlayerTick
 } from './demo-player-data';
 
+import Player from './bsp/player';
+import createPlayerViewer from './bsp/player-viewer';
+
 const debug = {
   verbose: false
 };
@@ -973,6 +976,13 @@ export function parse( file ) {
       case DemoMessage.DEM_STOP:
         console.log( playerTicks );
         console.timeEnd( 'parsing' );
+
+        console.time( 'playerData' );
+        const playerIds = playerInfos.map( playerInfo => playerInfo.userID );
+        const players = playerIds.map( id => new Player( playerTicks, id ) );
+        const playerViewer = createPlayerViewer( players );
+        playerViewer.animate();
+        console.timeEnd( 'playerData' );
         return;
 
       case DemoMessage.DEM_CONSOLECMD:
