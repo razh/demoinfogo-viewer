@@ -1,24 +1,24 @@
 'use strict';
 
-var PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-var SOURCE_DIR = './app';
-var BUILD_DIR = 'dist';
+const SOURCE_DIR = './app';
+const BUILD_DIR = 'dist';
 
-var _ = require('lodash');
-var babelify = require('babelify');
-var brfs = require('brfs');
-var browserify = require('browserify');
-var browserifyShim = require('browserify-shim');
-var browserSync = require('browser-sync');
-var del = require('del');
-var mainBowerFiles = require('main-bower-files');
-var runSequence = require('run-sequence');
-var source = require('vinyl-source-stream');
-var watchify = require('watchify');
+const _ = require('lodash');
+const babelify = require('babelify');
+const brfs = require('brfs');
+const browserify = require('browserify');
+const browserifyShim = require('browserify-shim');
+const browserSync = require('browser-sync').create();
+const del = require('del');
+const mainBowerFiles = require('main-bower-files');
+const runSequence = require('run-sequence');
+const source = require('vinyl-source-stream');
+const watchify = require('watchify');
 
-var gulp = require('gulp');
-var util = require('gulp-util');
+const gulp = require('gulp');
+const util = require('gulp-util');
 
 function onError(error) {
   util.log(error.message);
@@ -27,7 +27,7 @@ function onError(error) {
 }
 
 gulp.task('browser-sync', function() {
-  return browserSync({
+  return browserSync.init({
     browser: [],
     port: PORT,
     server: {
@@ -37,7 +37,7 @@ gulp.task('browser-sync', function() {
 });
 
 gulp.task('js', function() {
-  var bundler = watchify(browserify(SOURCE_DIR + '/js/main.js',
+  const bundler = watchify(browserify(SOURCE_DIR + '/js/main.js',
     _.assign({
       debug: true
     }, watchify.args)));
@@ -52,7 +52,7 @@ gulp.task('js', function() {
       .on('error', onError)
       .pipe(source('bundle.js'))
       .pipe(gulp.dest(BUILD_DIR))
-      .pipe(browserSync.reload({stream: true, once: true}));
+      .pipe(browserSync.stream());
   }
 
   bundler
