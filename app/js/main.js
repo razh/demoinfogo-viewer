@@ -2,6 +2,16 @@ import _ from 'lodash';
 import dat from 'dat-gui';
 import { parse, options, debug } from './demo';
 
+/**
+import { parse as parseDemo, options, debug } from './demo';
+import { parse } from './bsp/';
+/**/
+
+/**
+import { parse as parseDemo, options, debug } from './demo';
+import { parse } from './demo-player';
+/**/
+
 function createGUI() {
   // Add options interface.
   var gui = new dat.GUI();
