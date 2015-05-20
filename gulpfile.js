@@ -9,10 +9,8 @@ const _ = require('lodash');
 const babelify = require('babelify');
 const brfs = require('brfs');
 const browserify = require('browserify');
-const browserifyShim = require('browserify-shim');
 const browserSync = require('browser-sync').create();
 const del = require('del');
-const mainBowerFiles = require('main-bower-files');
 const runSequence = require('run-sequence');
 const source = require('vinyl-source-stream');
 const watchify = require('watchify');
@@ -44,8 +42,7 @@ gulp.task('js', function() {
 
   bundler
     .transform(babelify)
-    .transform(brfs)
-    .transform(browserifyShim);
+    .transform(brfs);
 
   function rebundle() {
     return bundler.bundle()
@@ -67,16 +64,11 @@ gulp.task('html', function() {
     .pipe(gulp.dest(BUILD_DIR));
 });
 
-gulp.task('bower', function() {
-  return gulp.src(mainBowerFiles())
-    .pipe(gulp.dest(BUILD_DIR));
-});
-
 gulp.task('clean', del.bind(null, [BUILD_DIR]));
 
 gulp.task('default', ['clean'], function(cb) {
   return runSequence(
-    ['html', 'bower', 'js'],
+    ['html', 'js'],
     'browser-sync',
     cb
   );
