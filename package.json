@@ -22,20 +22,20 @@
     "bn.js": "^2.0.5",
     "d3": "^3.5.5",
     "dat-gui": "^0.5.0",
-    "lodash": "^3.9.1",
-    "protocol-buffers": "^3.1.1",
+    "lodash": "^3.9.3",
+    "protocol-buffers": "^3.1.2",
     "three": "^0.71.0"
   },
   "devDependencies": {
-    "babelify": "^6.1.1",
+    "babelify": "^6.1.2",
     "brfs": "^1.4.0",
-    "browser-sync": "^2.7.1",
-    "browserify": "^10.2.0",
+    "browser-sync": "^2.7.10",
+    "browserify": "^10.2.4",
     "del": "^1.2.0",
-    "gulp": "^3.8.11",
-    "gulp-util": "^3.0.4",
+    "gulp": "^3.9.0",
+    "gulp-util": "^3.0.5",
     "run-sequence": "^1.1.0",
     "vinyl-source-stream": "^1.1.0",
-    "watchify": "^3.2.1"
+    "watchify": "^3.2.2"
   }
 }
