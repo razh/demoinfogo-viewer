@@ -4,7 +4,7 @@ const mergeBoundingSpheres = (() => {
   const difference = new THREE.Vector3();
 
   return ( a, b ) => {
-    difference.copy( b.center ).sub( a.center );
+    difference.subVectors( b.center, a.center );
 
     const length = difference.length();
     const ra = a.radius;

@@ -83,9 +83,8 @@ function createDisplacementGeometries( bsp ) {
   // Edge deltas.
   var du = new THREE.Vector3();
   var dv = new THREE.Vector3();
-  // Temporary vectors.
+  // Temporary vector.
   var vector = new THREE.Vector3();
-  var temp = new THREE.Vector3();
   var f, fl;
   var i, j;
   // Parameters along face.
@@ -108,8 +107,8 @@ function createDisplacementGeometries( bsp ) {
      *   0       3
      */
     v0 = startVertex( face.firstedge );
-    du.copy( startVertex( face.firstedge + 1 ) ).sub( v0 );
-    dv.copy( startVertex( face.firstedge + 3 ) ).sub( v0 );
+    du.subVectors( startVertex( face.firstedge + 1 ), v0 );
+    dv.subVectors( startVertex( face.firstedge + 3 ), v0 );
 
     size = ( 1 << dispinfo.power ) + 1;
     vertexCount = size * size;
@@ -120,9 +119,9 @@ function createDisplacementGeometries( bsp ) {
       vt = Math.floor( i / size ) / ( size - 1 );
 
       vector.copy( v0 )
-        .add( temp.copy( du ).multiplyScalar( ut ) )
-        .add( temp.copy( dv ).multiplyScalar( vt ) )
-        .add( temp.copy( dispVert.vector ).multiplyScalar( dispVert.dist ) );
+        .addScaledVector( du, ut )
+        .addScaledVector( dv, vt )
+        .addScaledVector( dispVert.vector, dispVert.dist );
 
       disp.vertices.push( vector.clone() );
     }
@@ -189,8 +188,8 @@ export function init( bsp ) {
   scene.add( helper );
 
   // Displacements.
-if ( options.displacements ) {
-   var dispMaterial = new THREE.MeshPhongMaterial({
+  if ( options.displacements ) {
+    var dispMaterial = new THREE.MeshPhongMaterial({
       color: 0xbbbbbb,
       ambient: 0xff3333,
       opacity: 0.8,
@@ -244,7 +243,7 @@ export function animate() {
   camera.position.set(
     scale * radius * Math.cos( angle ) + center.x,
     scale * radius * Math.sin( angle ) + center.y,
-    0.5 * scale * radius
+    scale * radius * 0.5
   );
 
   camera.lookAt( center );
