@@ -1,34 +1,32 @@
 import THREE from 'three';
 
+// Temporary vector.
+const vector = new THREE.Vector3();
+
 function createBSPGeometry( bsp ) {
-  var {
+  const {
     vertexes,
     edges,
     surfedges,
     faces
   } = bsp;
 
-  var geometry = new THREE.Geometry();
+  const geometry = new THREE.Geometry();
 
   // Vertices.
-  var i, il;
-  for ( i = 0, il = vertexes.length; i < il; i++ ) {
+  for ( let i = 0; i < vertexes.length; i++ ) {
     geometry.vertices.push( new THREE.Vector3().copy( vertexes[i] ) );
   }
 
   // Faces.
-  var edge;
-  var surfedge;
-  var face;
-  var vi, vj, vk;
-  var j;
-  for ( i = 0, il = faces.length; i < il; i++ ) {
-    face = faces[i];
+  for ( let i = 0; i < faces.length; i++ ) {
+    const face = faces[i];
 
     // Triangulate BSP faces (convex polygons).
-    for ( j = 0; j < face.numedges - 1; j++ ) {
-      surfedge = surfedges[ face.firstedge + j ];
-      edge = edges[ Math.abs( surfedge ) ];
+    let vi, vj, vk;
+    for ( let j = 0; j < face.numedges - 1; j++ ) {
+      const surfedge = surfedges[ face.firstedge + j ];
+      const edge = edges[ Math.abs( surfedge ) ];
 
       // Initial vertex.
       // Reverse winding order if surfedge is negative.
@@ -56,7 +54,7 @@ function createBSPGeometry( bsp ) {
 }
 
 function createDisplacementGeometries( bsp ) {
-  var {
+  const {
     vertexes,
     surfedges,
     edges,
@@ -66,37 +64,25 @@ function createDisplacementGeometries( bsp ) {
   } = bsp;
 
   function startVertex( face ) {
-    var surfedge = surfedges[ face ];
-    var edge = edges[ Math.abs( surfedge ) ];
+    const surfedge = surfedges[ face ];
+    const edge = edges[ Math.abs( surfedge ) ];
     return vertexes[ surfedge >= 0 ? edge.v[0] : edge.v[1] ];
   }
 
-  var disps = [];
+  const disps = [];
 
-  var face;
-  var dispinfo;
-  var dispVert;
-  var disp;
-  var v0;
-  var size;
-  var vertexCount;
   // Edge deltas.
-  var du = new THREE.Vector3();
-  var dv = new THREE.Vector3();
-  // Temporary vector.
-  var vector = new THREE.Vector3();
-  var f, fl;
-  var i, j;
-  // Parameters along face.
-  var ut, vt;
-  for ( f = 0, fl = faces.length; f < fl; f++ ) {
-    face = faces[f];
+  const du = new THREE.Vector3();
+  const dv = new THREE.Vector3();
+
+  for ( let f = 0; f < faces.length; f++ ) {
+    const face = faces[f];
     if ( face.dispinfo < 0 ) {
       continue;
     }
 
-    dispinfo = dispinfos[ face.dispinfo ];
-    disp = new THREE.Geometry();
+    const dispinfo = dispinfos[ face.dispinfo ];
+    const disp = new THREE.Geometry();
 
     /**
      *   1       2
@@ -106,17 +92,18 @@ function createDisplacementGeometries( bsp ) {
      *    o-----o
      *   0       3
      */
-    v0 = startVertex( face.firstedge );
+    const v0 = startVertex( face.firstedge );
     du.subVectors( startVertex( face.firstedge + 1 ), v0 );
     dv.subVectors( startVertex( face.firstedge + 3 ), v0 );
 
-    size = ( 1 << dispinfo.power ) + 1;
-    vertexCount = size * size;
-    for ( i = 0; i < vertexCount; i++ ) {
-      dispVert = dispVerts[ dispinfo.dispVertStart + i ];
+    const size = ( 1 << dispinfo.power ) + 1;
+    const vertexCount = size * size;
+    for ( let i = 0; i < vertexCount; i++ ) {
+      const dispVert = dispVerts[ dispinfo.dispVertStart + i ];
 
-      ut = ( i % size ) / ( size - 1 );
-      vt = Math.floor( i / size ) / ( size - 1 );
+      // Parameters along face.
+      const ut = ( i % size ) / ( size - 1 );
+      const vt = Math.floor( i / size ) / ( size - 1 );
 
       vector.copy( v0 )
         .addScaledVector( du, ut )
@@ -127,13 +114,12 @@ function createDisplacementGeometries( bsp ) {
     }
 
     // Faces.
-    var a, b, c, d;
-    for ( i = 0; i < size - 1; i++ ) {
-      for ( j = 0; j < size - 1; j++ ) {
-        a = j + size * i;
-        b = j + size * ( i + 1 );
-        c = ( j + 1 ) + size * ( i + 1 );
-        d = ( j + 1 ) + size * i;
+    for ( let i = 0; i < size - 1; i++ ) {
+      for ( let j = 0; j < size - 1; j++ ) {
+        const a = j + size * i;
+        const b = j + size * ( i + 1 );
+        const c = ( j + 1 ) + size * ( i + 1 );
+        const d = ( j + 1 ) + size * i;
 
         disp.faces.push( new THREE.Face3( a, b, d ) );
         disp.faces.push( new THREE.Face3( b, c, d ) );
@@ -146,15 +132,15 @@ function createDisplacementGeometries( bsp ) {
   return disps;
 }
 
-var options = {
+let options = {
   displacements: false
 };
 
-var container;
-var scene, camera, renderer;
-var mesh, geometry, material;
+let container;
+let scene, camera, renderer;
+let mesh, geometry, material;
 
-var scale = 1;
+let scale = 1;
 
 export function init( bsp ) {
   container = document.createElement( 'div' );
@@ -184,12 +170,12 @@ export function init( bsp ) {
   mesh = new THREE.Mesh( geometry, material );
   scene.add( mesh );
 
-  var helper = new THREE.EdgesHelper( mesh, 0x000000 );
+  const helper = new THREE.EdgesHelper( mesh, 0x000000 );
   scene.add( helper );
 
   // Displacements.
   if ( options.displacements ) {
-    var dispMaterial = new THREE.MeshPhongMaterial({
+    const dispMaterial = new THREE.MeshPhongMaterial({
       color: 0xbbbbbb,
       ambient: 0xff3333,
       opacity: 0.8,
@@ -201,13 +187,13 @@ export function init( bsp ) {
       geometry.computeFaceNormals();
       geometry.computeVertexNormals();
 
-      var mesh = new THREE.Mesh( geometry, dispMaterial );
+      const mesh = new THREE.Mesh( geometry, dispMaterial );
       scene.add( mesh );
       return mesh;
     });
   }
 
-  var light = new THREE.DirectionalLight( '#fff' );
+  const light = new THREE.DirectionalLight( '#fff' );
   light.position.copy( geometry.boundingSphere.center );
   light.position.z += geometry.boundingSphere.radius;
   scene.add( light );
@@ -225,7 +211,7 @@ export function init( bsp ) {
   container.addEventListener( 'wheel', event => {
     event.preventDefault();
 
-    var speed = 0.98;
+    const speed = 0.98;
     if ( event.deltaY > 0 ) {
       scale /= speed;
     } else {
@@ -235,10 +221,10 @@ export function init( bsp ) {
 }
 
 export function animate() {
-  var time = Date.now() * 1e-3;
+  const time = Date.now() * 1e-3;
 
-  var { center, radius } = geometry.boundingSphere;
-  var angle = 0.25 * time;
+  const { center, radius } = geometry.boundingSphere;
+  const angle = 0.25 * time;
 
   camera.position.set(
     scale * radius * Math.cos( angle ) + center.x,
