@@ -1,29 +1,10 @@
-import BN from 'bn.js';
-
 export const BitCoordType = {
   None: 0,
   LowPrecision: 1,
   Integral: 2
 };
 
-function xorBN( a, b ) {
-  a = a.toArray();
-  b = b.toArray();
-
-  var al = a.length;
-  var bl = b.length;
-  var length = Math.max( al, bl );
-
-  // BN uses big-endian, so subtract from length.
-  // e.g. 256 is stored as [ 1, 0 ] whereas 255 is [ 255 ].
-  var bytes = [];
-  for ( var i = 0; i < length; i++ ) {
-    bytes.unshift( ( a[ al - i - 1 ] | 0 ) ^ ( b[ bl - i - 1 ] | 0 ) );
-  }
-
-  return new BN( bytes );
-}
-
+// Little endian.
 export const bitbuf = {
   // ZigZag Transform:  Encodes signed integers so that they can be
   // effectively used with varint encoding.
@@ -57,16 +38,18 @@ export const bitbuf = {
     return ( n >> 1 ) ^ -( n & 1 );
   },
 
-  // Requires big numbers.
+  // Requires big numbers (bn.js).
   zigZagEncode64( n ) {
     // Note the right-shift must be arithmetic.
     // return ( n << 1 ) ^ ( n >> 63 );
-    return xorBN( n.shln( 1 ), n.shrn( 63 ) );
+    return n.shln( 1 ).xor( n.shrn( 63 ) );
   },
 
+  // Requires big numbers (bn.js).
   zigZagDecode64( n ) {
     // return ( n >> 1 ) ^ -( n & 1 );
-    return xorBN( n.shrn( 1 ), new BN( -n.andln( 1 ) ) );
+    // Note: .andln() will be replaced with .andn() some time in the future.
+    return n.shrn( 1 ).xor( n.andln( 1 ).neg() );
   },
 
   kMaxVarintBytes: 10,
