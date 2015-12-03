@@ -1,15 +1,18 @@
 import _ from 'lodash';
 import protobuf from 'protocol-buffers';
 
-var fs = require( 'fs' );
+const fs = require( 'fs' );
+const path = require( 'path' );
 
 // Protocol buffer definitions.
 export const messages = protobuf(
-  fs.readFileSync( __dirname + '/../proto/netmessages_public.proto', 'utf8' ) +
-  fs.readFileSync( __dirname + '/../proto/cstrike15_usermessages_public.proto', 'utf8' )
+  fs.readFileSync( path.join( __dirname, '/../proto/netmessages_public.proto' ), 'utf8' ) +
+  fs.readFileSync( path.join( __dirname, '/../proto/cstrike15_usermessages_public.proto' ), 'utf8' )
 );
 
-export const { NET_Messages, SVC_Messages, ECstrike15UserMessages } = messages;
+export const NET_Messages = messages.NET_Messages;
+export const SVC_Messages = messages.SVC_Messages;
+export const ECstrike15UserMessages = messages.ECstrike15UserMessages;
 
 
 /**

@@ -19,23 +19,24 @@
   },
   "homepage": "https://github.com/razh/demoinfogo-viewer",
   "dependencies": {
-    "bn.js": "^3.2.0",
-    "d3": "^3.5.6",
+    "bn.js": "^4.4.0",
+    "d3": "^3.5.10",
     "dat-gui": "^0.5.0",
     "lodash": "^3.10.1",
     "protocol-buffers": "^3.1.3",
     "three": "^0.73.0"
   },
   "devDependencies": {
-    "babelify": "^6.4.0",
+    "babel-preset-es2015": "^6.1.18",
+    "babelify": "^7.2.0",
     "brfs": "^1.4.1",
-    "browser-sync": "^2.9.11",
-    "browserify": "^12.0.0",
-    "del": "^2.0.2",
+    "browser-sync": "^2.10.0",
+    "browserify": "^12.0.1",
+    "del": "^2.1.0",
     "gulp": "^3.9.0",
     "gulp-util": "^3.0.7",
-    "run-sequence": "^1.1.4",
+    "run-sequence": "^1.1.5",
     "vinyl-source-stream": "^1.1.0",
-    "watchify": "^3.5.0"
+    "watchify": "^3.6.1"
   }
 }
