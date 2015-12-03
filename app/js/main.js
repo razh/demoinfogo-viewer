@@ -1,23 +1,23 @@
 import _ from 'lodash';
 import dat from 'dat-gui';
-import { parse, options, debug } from './demo';
-
-/**
 import { parse as parseDemo, options, debug } from './demo';
-import { parse } from './bsp/';
-/**/
+import { parse as parsePlayer } from './demo-player';
+import { parse as parseBSP } from './bsp/';
 
-/**
-import { parse as parseDemo, options, debug } from './demo';
-import { parse } from './demo-player';
-/**/
+let parse = parseDemo;
+
+if ( /player/.test( window.location.search ) ) {
+  parse = parsePlayer;
+} else if ( /bsp/.test( window.location.search ) ) {
+  parse = parseBSP;
+}
 
 function createGUI() {
   // Add options interface.
-  var gui = new dat.GUI();
+  const gui = new dat.GUI();
 
   function createFolder( options, name ) {
-    var folder = gui.addFolder( name );
+    const folder = gui.addFolder( name );
     _.forOwn( options, ( value, key ) => folder.add( options, key ) );
     folder.open();
   }
@@ -57,7 +57,7 @@ document.addEventListener( 'drop', event => {
   Promise.all(
     _.map( event.dataTransfer.files, file => {
       return new Promise( ( resolve, reject ) => {
-        var reader = new FileReader();
+        const reader = new FileReader();
         reader.onload = resolve;
         reader.onerror = reject;
         reader.readAsArrayBuffer( file );
